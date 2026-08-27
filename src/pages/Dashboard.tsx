@@ -1,5 +1,9 @@
+import type { Application, User } from "../api/client";
+
 interface DashboardProps {
   onNavigate: (page: string) => void;
+  user: User | null;
+  application: Application;
 }
 
 type StepStatus = "done" | "active" | "upcoming";
@@ -9,28 +13,25 @@ interface Step {
   status: StepStatus;
 }
 
-const steps: Step[] = [
-  { label: "Application started", status: "done" },
-  { label: "Personal details", status: "done" },
-  { label: "Documents", status: "done" },
-  { label: "Payment", status: "done" },
-  { label: "Learner's Licence test", status: "active" },
-  { label: "Learner's Licence issued", status: "upcoming" },
-  { label: "30-day waiting period", status: "upcoming" },
-  { label: "Apply for Driving Licence", status: "upcoming" },
-  { label: "Driving test", status: "upcoming" },
-  { label: "Licence issued", status: "upcoming" },
-  { label: "Delivery", status: "upcoming" },
-];
+function getSteps(intent: Application["intent"]): Step[] {
+  if (intent === "existing-ll") return [
+    { label: "Learner's Licence confirmed", status: "done" }, { label: "Driving Licence application", status: "active" }, { label: "Documents", status: "upcoming" }, { label: "Payment", status: "upcoming" }, { label: "Driving-test appointment", status: "upcoming" }, { label: "Driving test", status: "upcoming" }, { label: "Licence issued", status: "upcoming" }, { label: "Delivery", status: "upcoming" },
+  ];
+  return [
+    { label: "Application started", status: "active" }, { label: "Personal details", status: "upcoming" }, { label: "Documents", status: "upcoming" }, { label: "Payment", status: "upcoming" }, { label: "Learner's Licence test", status: "upcoming" }, { label: "Learner's Licence issued", status: "upcoming" }, { label: "30-day waiting period", status: "upcoming" }, { label: "Apply for Driving Licence", status: "upcoming" }, { label: "Driving test", status: "upcoming" }, { label: "Licence issued", status: "upcoming" }, { label: "Delivery", status: "upcoming" },
+  ];
+}
 
-export default function Dashboard({ onNavigate }: DashboardProps) {
+export default function Dashboard({ onNavigate, user, application }: DashboardProps) {
+  const existingLl = application.intent === "existing-ll";
+  const steps = getSteps(application.intent);
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-5 pt-10 pb-24">
         {/* Greeting */}
         <div className="mb-10">
           <p className="text-sm text-gray-500 mb-1">Good morning,</p>
-          <h1 className="font-serif text-3xl md:text-4xl text-gray-900">Priya Mehta</h1>
+          <h1 className="font-serif text-3xl md:text-4xl text-gray-900">{user?.name?.split(" ")[0] || "there"}</h1>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
@@ -55,25 +56,21 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div className="text-xs font-medium text-teal-200 uppercase tracking-widest mb-3">
                 Your next step
               </div>
-              <h2 className="text-xl font-semibold mb-2">Take your Learner's Licence test</h2>
+              <h2 className="text-xl font-semibold mb-2">{existingLl ? "Start your Driving Licence application" : "Continue your Learner's Licence application"}</h2>
               <p className="text-sm text-teal-100 leading-relaxed mb-1">
-                <span className="font-medium text-white">What you need to do:</span> Complete a
-                30-question online theory test about road rules and signs.
+                <span className="font-medium text-white">What you need to do:</span> Add the details needed to begin this application.
               </p>
               <p className="text-sm text-teal-100 leading-relaxed mb-1">
-                <span className="font-medium text-white">Why it matters:</span> You need to pass
-                this to receive your Learner's Licence — the first official document that lets you
-                practise driving on the road.
+                <span className="font-medium text-white">Why it matters:</span> We’ll use this information to guide the rest of your journey.
               </p>
               <p className="text-sm text-teal-100 leading-relaxed mb-5">
-                <span className="font-medium text-white">What happens next:</span> Your Learner's
-                Licence will be issued within 2–3 working days after you pass.
+                <span className="font-medium text-white">What happens next:</span> Your journey will show one clear step at a time.
               </p>
               <button
                 onClick={() => onNavigate("apply")}
                 className="px-5 py-2.5 bg-white text-teal-700 text-sm font-semibold rounded-xl hover:bg-teal-50 transition-colors"
               >
-                Start the test →
+                Continue →
               </button>
             </div>
 
@@ -102,12 +99,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 Application summary
               </p>
               <div className="grid grid-cols-2 gap-4">
-                <Stat label="Application ID" value="AP2024-00387" />
-                <Stat label="State" value="Maharashtra" />
-                <Stat label="RTO" value="Pune West (MH-12)" />
-                <Stat label="Category" value="LMV — Light Motor Vehicle" />
-                <Stat label="Applied on" value="14 August 2024" />
-                <Stat label="LL Test" value="Pending" highlight />
+                <Stat label="Application ID" value={application.id} />
+                <Stat label="Application type" value={existingLl ? "Driving Licence" : "Learner's Licence"} />
+                <Stat label="State" value={application.state || "To be selected"} />
+                <Stat label="RTO" value={application.rto || "To be selected"} />
+                <Stat label="Current step" value={application.currentStep.replace(/-/g, " ")} />
+                <Stat label="Status" value={application.status} highlight />
               </div>
             </div>
           </div>

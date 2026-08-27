@@ -2,9 +2,10 @@ interface NavProps {
   loggedIn?: boolean;
   onNavigate: (page: string) => void;
   currentPage?: string;
+  onLogout?: () => void;
 }
 
-export default function Nav({ loggedIn, onNavigate, currentPage }: NavProps) {
+export default function Nav({ loggedIn, onNavigate, currentPage, onLogout }: NavProps) {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
       <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
@@ -25,7 +26,9 @@ export default function Nav({ loggedIn, onNavigate, currentPage }: NavProps) {
                 Resources
               </NavLink>
               <button
-                onClick={() => onNavigate("landing")}
+                onClick={onLogout}
+                aria-label="Sign out"
+                title="Sign out"
                 className="ml-2 w-8 h-8 rounded-full bg-teal-600 text-white text-sm font-medium flex items-center justify-center hover:bg-teal-700 transition-colors"
               >
                 P

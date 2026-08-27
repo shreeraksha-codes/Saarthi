@@ -14,9 +14,9 @@ const options = [
     ),
   },
   {
-    id: "have-ll",
+    id: "existing-ll",
     title: "I already have a Learner's Licence",
-    desc: "My 30-day waiting period is over. I want to apply for my full Driving Licence.",
+    desc: "My Learner's Licence is valid and I'm ready to apply for my full Driving Licence.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="5" width="20" height="14" rx="3" />
