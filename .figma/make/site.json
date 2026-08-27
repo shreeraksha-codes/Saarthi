@@ -1,0 +1,10 @@
+{
+  "description": "Create and customize professional templates effortlessly for various needs, streamlining design for businesses, educators, and individuals.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
