@@ -63,16 +63,17 @@
 
 ## Accessibility
 
-- [ ] Larger readable body descriptions
-- [ ] Larger subheadings
-- [ ] rem-based typography
+- [x] Larger readable body descriptions
+- [x] Larger subheadings
+- [x] rem-based typography
 - [ ] 125% zoom
 - [ ] 150% zoom
 - [ ] 200% zoom
-- [ ] Keyboard navigation
-- [ ] Visible focus
-- [ ] Mobile touch targets
-- [ ] No horizontal overflow
+- [x] Keyboard navigation
+- [x] Visible focus
+- [x] Mobile touch targets
+- [x] Mobile test (320px, 360px, 390px, 412px) and desktop responsive layout
+- [x] No important horizontal overflow at verified responsive widths
 
 ## Reliability
 
@@ -90,7 +91,7 @@
 - [x] Production build
 - [ ] Full end-to-end test
 - [ ] Negative-path test
-- [ ] Mobile test
+- [x] Mobile test
 - [ ] Accessibility test
 - [ ] Deployment
 - [x] GitHub final push

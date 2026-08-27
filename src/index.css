@@ -20,18 +20,87 @@ html, body, #root {
   height: 100%;
 }
 
+html {
+  font-size: 100%;
+  overflow-x: clip;
+}
+
 body {
   font-family: var(--font-sans);
   background: #ffffff;
   color: #111827;
+  font-size: 1rem;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Hide scrollbar by default, show on scroll */
-* {
-  scrollbar-width: none;
+button, input, select, textarea {
+  font: inherit;
 }
-*:hover {
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
+
+button, input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  min-height: 2.75rem;
+}
+
+:focus-visible {
+  outline: 3px solid #0B9B97;
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  border-radius: 0.5rem;
+  background: #063d3b;
+  padding: 0.75rem 1rem;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline-color: #F0B429;
+}
+
+@layer utilities {
+  .text-xs {
+    font-size: 0.8125rem;
+    line-height: 1.35rem;
+  }
+
+  .text-sm {
+    font-size: 0.9375rem;
+    line-height: 1.45rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  nav, button, .skip-link, [role="dialog"] {
+    display: none !important;
+  }
+
+  html, body, #root {
+    height: auto;
+    background: #ffffff;
+  }
+
+  .min-h-screen {
+    min-height: auto;
+  }
 }

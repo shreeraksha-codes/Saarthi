@@ -63,16 +63,19 @@ export default function App() {
 
   return (
     <div className="min-h-full flex flex-col">
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       {!bare && <Nav loggedIn={loggedIn} onNavigate={navigate} currentPage={page} onLogout={handleLogout} />}
 
-      {page === "landing" && <Landing onNavigate={navigate} />}
-      {page === "resources" && <Resources onNavigate={navigate} />}
-      {page === "entry" && <ApplicationEntry onNavigate={navigate} />}
-      {page === "signin" && <SignIn onNavigate={navigate} navData={navData} onAuthenticated={handleAuthenticated} />}
-      {page === "dashboard" && application && <Dashboard onNavigate={navigate} user={user} application={application} />}
-      {page === "apply" && application && <ApplicationFlow application={application} onUpdated={setApplication} onNavigate={navigate} />}
-      {page === "guided" && application && <GuidedApplication application={application} onUpdated={setApplication} onNavigate={navigate} />}
-      {page === "help" && <Help onNavigate={navigate} application={application} />}
+      <main id="main-content" tabIndex={-1}>
+        {page === "landing" && <Landing onNavigate={navigate} />}
+        {page === "resources" && <Resources onNavigate={navigate} />}
+        {page === "entry" && <ApplicationEntry onNavigate={navigate} />}
+        {page === "signin" && <SignIn onNavigate={navigate} navData={navData} onAuthenticated={handleAuthenticated} />}
+        {page === "dashboard" && application && <Dashboard onNavigate={navigate} user={user} application={application} />}
+        {page === "apply" && application && <ApplicationFlow application={application} onUpdated={setApplication} onNavigate={navigate} />}
+        {page === "guided" && application && <GuidedApplication application={application} onUpdated={setApplication} onNavigate={navigate} />}
+        {page === "help" && <Help onNavigate={navigate} application={application} />}
+      </main>
     </div>
   );
 }

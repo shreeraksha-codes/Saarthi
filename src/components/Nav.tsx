@@ -8,7 +8,7 @@ interface NavProps {
 export default function Nav({ loggedIn, onNavigate, currentPage, onLogout }: NavProps) {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
-      <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto flex min-h-16 flex-wrap items-center gap-2 px-5 py-2 sm:flex-nowrap sm:justify-between">
         <button
           onClick={() => onNavigate("landing")}
           className="font-serif text-xl text-teal-600 tracking-tight hover:text-teal-700 transition-colors"
@@ -16,7 +16,7 @@ export default function Nav({ loggedIn, onNavigate, currentPage, onLogout }: Nav
           Sarathi
         </button>
 
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto">
           {loggedIn ? (
             <>
               <NavLink active={currentPage === "dashboard"} onClick={() => onNavigate("dashboard")}>
@@ -29,7 +29,7 @@ export default function Nav({ loggedIn, onNavigate, currentPage, onLogout }: Nav
                 onClick={onLogout}
                 aria-label="Sign out"
                 title="Sign out"
-                className="ml-2 w-8 h-8 rounded-full bg-teal-600 text-white text-sm font-medium flex items-center justify-center hover:bg-teal-700 transition-colors"
+                className="ml-1 h-11 w-11 rounded-full bg-teal-600 text-white text-sm font-medium flex items-center justify-center hover:bg-teal-700 transition-colors"
               >
                 P
               </button>
@@ -42,7 +42,7 @@ export default function Nav({ loggedIn, onNavigate, currentPage, onLogout }: Nav
               <NavLink onClick={() => onNavigate("signin")}>Login</NavLink>
               <button
                 onClick={() => onNavigate("entry")}
-                className="ml-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 active:bg-teal-800 transition-colors"
+                className="ml-1 whitespace-nowrap px-3 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 active:bg-teal-800 transition-colors sm:px-4"
               >
                 Apply for a Licence
               </button>
@@ -66,7 +66,7 @@ function NavLink({
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+      className={`min-h-11 whitespace-nowrap px-2.5 py-2 text-sm rounded-md transition-colors sm:px-3 ${
         active
           ? "text-teal-700 bg-teal-50 font-medium"
           : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"

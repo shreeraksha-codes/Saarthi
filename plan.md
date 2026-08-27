@@ -70,11 +70,12 @@ React 19 + Vite + TypeScript + Tailwind CSS v4, with a Node/Express backend, SQL
 - [x] Validate the allowlisted extraction result and require confirmation before persistence.
 - [x] Preserve deterministic guidance as the missing-key, error, timeout, and invalid-output fallback.
 
-### Phase 5 — Accessibility + visual polish + performance
+### Phase 5 — Accessibility + visual polish + performance ✅ Complete
 
-- [ ] Improve readable typography, focus treatment, touch targets, and responsive behavior.
-- [ ] Verify 125%, 150%, and 200% browser zoom without clipping or horizontal overflow.
-- [ ] Review performance on low-end mobile and slow connections.
+- [x] Improve readable typography, focus treatment, touch targets, semantic landmarks, print rules, and responsive navigation/dialog behavior.
+- [x] Verify 320px, 360px, 390px, 412px, and desktop responsive layouts with no important horizontal overflow; dialogs and controls remain usable.
+- [ ] Verify 125%–200% native browser zoom (the available browser exposes no page-zoom control; effective-width checks passed but are not a substitute).
+- [x] Review the production bundle, dependencies, and existing low-connectivity/fallback behavior; avoid adding runtime weight or repeated requests.
 
 ### Phase 6 — Final testing + deployment + submission
 

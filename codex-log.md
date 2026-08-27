@@ -50,3 +50,12 @@
 - **Tests run:** `pnpm typecheck`, `pnpm build`, missing-key and invalid-structured-output fallback, confirmation-before-save, unsupported-field rejection, refresh persistence, source/bundle secret scan, `.env` ignore check, and local API-compatible mock configured-path check.
 - **Bug fixed:** the first request payload construction had a syntax error; refactored to an explicit payload object and reran server syntax/build checks.
 - **Known limitations:** no live OpenAI credential was present for an account-backed call; local mock coverage verifies the real-path request/response handling.
+
+## 2026-08-28 — Phase 5: Accessibility, responsive behavior, and performance polish
+
+- **Objective:** improve the existing Figma-derived UI’s readability and resilient presentation without redesigning it or altering LL/DL state logic.
+- **Files modified:** `src/index.css`, `src/App.tsx`, `src/components/Nav.tsx`, `src/pages/Resources.tsx`, `.figma/make/site.json`, `plan.md`, `progress.md`, `codex-log.md`, and `checklist.md`.
+- **Implementation details:** standardized body/helper type in relative units, added line-height and minimum interactive-control heights, visible `:focus-visible` outlines, a skip link and `main` landmark, reduced-motion support, mobile-safe wrapping navigation, and print-only chrome suppression. The resource dialog now has a description relationship, receives initial keyboard focus, and scrolls within the viewport instead of exceeding it.
+- **Performance decisions:** retained the current dependency set and static CSS approach; no animation library, image asset, API request, or application state model was added. Production output is 75.86 kB gzip JavaScript and 5.81 kB gzip CSS.
+- **Tests run:** `pnpm typecheck`; `pnpm build`; server syntax check; static audit of landmarks, labels, dialogs, print controls, and responsive containers.
+- **Responsive verification:** live preview checks at 320px, 360px, 390px, 412px, desktop, and effective desktop widths down to 640px found no important horizontal overflow. The navigation wrapped cleanly; the Apply action remained visible; all rendered form-choice buttons were at least 44px tall; and the Resources dialog fit the viewport, exposed its Close control to keyboard focus, and used internal vertical scrolling. The browser did not honor page-zoom keyboard commands or expose a native zoom control, so 125%–200% native zoom remains unverified rather than inferred.
