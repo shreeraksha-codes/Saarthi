@@ -36,3 +36,11 @@
 - **Tests/checks:** TypeScript check, production build, authenticated guided update/persistence, clarification response, allowlist rejection, and session refresh.
 - **Known limitations:** guidance is deterministic rather than an external LLM; Resources are concise in-product guides, not a complete official content library.
 - **Next phase:** Phase 5 — Accessibility + visual polish + performance.
+
+## 2026-08-28 — Phase 4.1 complete
+
+- **Objective:** add a real server-side LLM option to guided application while retaining a deterministic fallback.
+- **Files changed:** `.env.example`, `server/index.js`, `src/api/client.ts`, `src/pages/GuidedApplication.tsx`, and tracking documents.
+- **Features implemented:** OpenAI Responses API request with structured JSON schema, server validation, allowlisted fields, confirmation-before-save, seven-second timeout, and deterministic fallback for missing configuration, API failures, timeouts, and invalid model output.
+- **Tests/checks:** TypeScript check, production build, missing-key fallback, invalid-structured-output fallback, confirmation gating, unsupported-field rejection, refresh persistence, frontend secret scan, ignored `.env` check, and a local API-compatible mock of the configured LLM branch.
+- **Known limitations:** no live OpenAI key was configured locally, so a real provider-account request was not run; the mock confirms the configured code path only.

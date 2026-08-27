@@ -335,20 +335,36 @@ app.get('/api/applications/:id/licence', requireAuth, (req, res, next) => { try 
 app.get('/api/applications/:id/delivery', requireAuth, (req, res, next) => { try { assertOwner(req.params.id, req.userId); const licence = getApplication(req.params.id).dl?.licence; if (!licence) throw httpError(404, 'Delivery is not available yet.'); res.json({ delivery: licence }); } catch (error) { next(error); } });
 app.post('/api/applications/:id/delivery/advance', requireAuth, (req, res, next) => { try { assertOwner(req.params.id, req.userId); const sequence = ['issued', 'printed', 'dispatched', 'delivered']; const licence = getApplication(req.params.id).dl?.licence; if (!licence) throw httpError(404, 'Driving Licence record not found.'); const nextStatus = sequence[Math.min(sequence.indexOf(licence.deliveryStatus) + 1, sequence.length - 1)]; db.prepare('UPDATE driving_licences SET delivery_status = ?, updated_at = ? WHERE application_id = ?').run(nextStatus, now(), req.params.id); updateJourney(req.params.id, 'dl-delivery', nextStatus === 'delivered' ? 'dl-delivered' : `dl-${nextStatus}`); addEvent(req.params.id, `dl_${nextStatus}`, `Driving Licence ${nextStatus} — Demo`); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); } });
 
-app.post('/api/ai/application-message', requireAuth, (req, res, next) => {
+function deterministicGuide(field, message) {
+  const lower = message.toLowerCase(); let value = null; let reply = '';
+  if (/proof of address|address proof/.test(lower)) reply = 'Proof of address means a document showing where you currently live. Accepted documents can vary by state/RTO.';
+  else if (field === 'vehicle') { value = /both|bike.*car|car.*bike/.test(lower) ? 'LMV — Light Motor Vehicle and motorcycle (confirm at RTO)' : /car|lmv/.test(lower) ? 'LMV — Light Motor Vehicle' : /motor|bike|scooter/.test(lower) ? 'MCWG — Motorcycle with Gear' : null; reply = value ? `I understood: ${value}. Is that correct?` : 'Please choose a vehicle class: motorcycle or car. Your state/RTO confirms the final category.'; }
+  else if (field === 'name') { value = message; reply = `I understood your name as ${message}. Is that correct?`; }
+  else if (field === 'state') { value = ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu'].find((item) => item.toLowerCase() === lower) || null; reply = value ? `I understood: ${value}. Is that correct?` : 'Choose Maharashtra, Karnataka, Delhi, or Tamil Nadu in this demo. Requirements can vary by state/RTO.'; }
+  return { assistantMessage: reply, extractedField: value ? field : null, extractedValue: value, requiresConfirmation: Boolean(value), needsClarification: !value };
+}
+
+async function llmGuide(field, message) {
+  if (!process.env.OPENAI_API_KEY) throw new Error('LLM_NOT_CONFIGURED');
+  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 7000);
+  try {
+    const payload = { model: process.env.OPENAI_MODEL || 'gpt-4.1-mini', store: false, max_output_tokens: 160, text: { format: { type: 'json_schema', name: 'guided_application', strict: true, schema: { type: 'object', properties: { assistantMessage: { type: 'string' }, extractedField: { type: ['string', 'null'] }, extractedValue: { type: ['string', 'null'] }, requiresConfirmation: { type: 'boolean' }, needsClarification: { type: 'boolean' } }, required: ['assistantMessage', 'extractedField', 'extractedValue', 'requiresConfirmation', 'needsClarification'], additionalProperties: false } } }, input: `You are a concise Sarathi demo assistant. Extract only the requested field (${field}) from this message: ${message}. Do not give legal or official advice. If unclear, set extracted values to null and ask one clarification.` };
+    const response = await fetch(`${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/responses`, { method: 'POST', signal: controller.signal, headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!response.ok) throw new Error('LLM_REQUEST_FAILED'); const body = await response.json(); return JSON.parse(body.output_text);
+  } finally { clearTimeout(timer); }
+}
+
+function validGuidedResult(result, field) { return result && typeof result.assistantMessage === 'string' && typeof result.requiresConfirmation === 'boolean' && typeof result.needsClarification === 'boolean' && (result.extractedField === null || result.extractedField === field) && (result.extractedValue === null || typeof result.extractedValue === 'string'); }
+
+app.post('/api/ai/application-message', requireAuth, async (req, res, next) => {
   try {
     const applicationId = req.body.applicationId; assertOwner(applicationId, req.userId);
     const message = String(req.body.message || '').trim().slice(0, 300); const field = String(req.body.field || 'vehicle');
     if (!message) throw httpError(400, 'Write a response before sending.');
     if (!['vehicle', 'state', 'name'].includes(field)) throw httpError(400, 'That guided field is not available. Switch to the classic form for other details.');
-    const application = getApplication(applicationId); const lower = message.toLowerCase(); let reply = ''; let updates = {};
-    if (/proof of address|address proof/.test(lower)) reply = 'Proof of address means a document showing where you currently live. Accepted documents can vary by state/RTO.';
-    else if (field === 'vehicle') { const vehicle = /both|bike.*car|car.*bike/.test(lower) ? 'LMV — Light Motor Vehicle and motorcycle (confirm at RTO)' : /car|lmv/.test(lower) ? 'LMV — Light Motor Vehicle' : /motor|bike|scooter/.test(lower) ? 'MCWG — Motorcycle with Gear' : ''; if (!vehicle) reply = 'Please choose a vehicle class: motorcycle or car. Your state/RTO confirms the final category.'; else { updates = { vehicle }; reply = `I understood: ${vehicle}. Please confirm this in the classic form before submitting.`; } }
-    else if (field === 'name') { updates = { name: message }; reply = 'I saved that as your full name. Check it matches your document.'; }
-    else if (field === 'state') { const allowed = ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu']; const state = allowed.find((item) => item.toLowerCase() === lower); if (!state) reply = 'Choose Maharashtra, Karnataka, Delhi, or Tamil Nadu in this demo. Requirements can vary by state/RTO.'; else { updates = { state }; reply = `I saved ${state}. Choose your RTO in the classic form.`; } }
-    else reply = 'I can help with vehicle class, state/RTO, personal details, documents, and fitness. This is AI-assisted demo guidance, not official advice.';
-    if (Object.keys(updates).length) { if (updates.state) db.prepare('UPDATE applications SET state = ?, updated_at = ? WHERE id = ?').run(updates.state, now(), applicationId); else saveDetails(applicationId, updates); addEvent(applicationId, 'guided_application_update', 'Guided application answer saved'); }
-    res.json({ reply, updatedFields: Object.keys(updates), application: getApplication(applicationId) });
+    let result; let mode = 'llm'; try { result = await llmGuide(field, message); if (!validGuidedResult(result, field)) throw new Error('LLM_INVALID_OUTPUT'); } catch (_) { result = deterministicGuide(field, message); mode = 'fallback'; }
+    if (req.body.confirm === true && result.extractedField === field && result.extractedValue) { if (field === 'state') db.prepare('UPDATE applications SET state = ?, updated_at = ? WHERE id = ?').run(result.extractedValue, now(), applicationId); else saveDetails(applicationId, { [field]: result.extractedValue }); addEvent(applicationId, 'guided_application_update', 'Guided application answer confirmed'); }
+    res.json({ ...result, mode, saved: req.body.confirm === true && Boolean(result.extractedValue), application: getApplication(applicationId) });
   } catch (error) { next(error); }
 });
 

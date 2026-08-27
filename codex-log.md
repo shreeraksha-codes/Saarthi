@@ -40,3 +40,13 @@
 - **Tests run:** `pnpm typecheck`, `pnpm build`, guided field persistence, clarification behavior, allowlist validation, and session persistence.
 - **Bug fixed:** arbitrary guided field names were initially accepted as generic questions; the backend now rejects fields outside the allowlist.
 - **Known limitations:** no external LLM, multilingual support, or full official guidance corpus. The deterministic guide is intentionally limited and has a Classic Form fallback.
+
+## 2026-08-28 — Phase 4.1: Real LLM guided application with fallback
+
+- **Objective:** upgrade guided understanding through a server-only OpenAI Responses API path without removing the deterministic assistant.
+- **Files modified:** `.env.example`, `server/index.js`, `src/api/client.ts`, `src/pages/GuidedApplication.tsx`, and tracking documents.
+- **Architecture decisions:** use `OPENAI_API_KEY` and optional `OPENAI_MODEL` only in the server; request short structured JSON with `store: false`; send only the requested field and message; never send documents, OTPs, payment data, or application history. A strict server allowlist and confirmation gate remain authoritative.
+- **Implementation details:** model output is parsed and schema-checked before use. Valid extractions are displayed for confirmation and only saved after an explicit confirmation request. Missing keys, provider failure, timeout, and malformed output fall back to deterministic guidance.
+- **Tests run:** `pnpm typecheck`, `pnpm build`, missing-key and invalid-structured-output fallback, confirmation-before-save, unsupported-field rejection, refresh persistence, source/bundle secret scan, `.env` ignore check, and local API-compatible mock configured-path check.
+- **Bug fixed:** the first request payload construction had a syntax error; refactored to an explicit payload object and reran server syntax/build checks.
+- **Known limitations:** no live OpenAI credential was present for an account-backed call; local mock coverage verifies the real-path request/response handling.

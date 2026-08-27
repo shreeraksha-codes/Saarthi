@@ -58,6 +58,8 @@
 - [ ] Review/edit
 - [x] Fallback to classic form
 - [x] No sensitive data unnecessarily sent to LLM
+- [x] Server-side LLM structured output with deterministic fallback
+- [x] Confirmation before guided field persistence
 
 ## Accessibility
 

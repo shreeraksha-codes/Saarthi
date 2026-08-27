@@ -64,6 +64,12 @@ React 19 + Vite + TypeScript + Tailwind CSS v4, with a Node/Express backend, SQL
 - [x] Connect help and recovery paths to the persisted application state.
 - [x] Add a deterministic guided mode that writes to the same application data as the Classic Form.
 
+### Phase 4.1 — Real LLM guided application with fallback ✅ Complete
+
+- [x] Add a server-only OpenAI Responses API path using structured JSON output.
+- [x] Validate the allowlisted extraction result and require confirmation before persistence.
+- [x] Preserve deterministic guidance as the missing-key, error, timeout, and invalid-output fallback.
+
 ### Phase 5 — Accessibility + visual polish + performance
 
 - [ ] Improve readable typography, focus treatment, touch targets, and responsive behavior.
