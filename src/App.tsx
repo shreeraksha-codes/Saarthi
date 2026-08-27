@@ -69,7 +69,7 @@ export default function App() {
       {page === "entry" && <ApplicationEntry onNavigate={navigate} />}
       {page === "signin" && <SignIn onNavigate={navigate} navData={navData} onAuthenticated={handleAuthenticated} />}
       {page === "dashboard" && application && <Dashboard onNavigate={navigate} user={user} application={application} />}
-      {page === "apply" && <ApplicationFlow onNavigate={navigate} />}
+      {page === "apply" && application && <ApplicationFlow application={application} onUpdated={setApplication} onNavigate={navigate} />}
       {page === "help" && <Help onNavigate={navigate} />}
     </div>
   );

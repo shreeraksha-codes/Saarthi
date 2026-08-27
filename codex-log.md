@@ -10,3 +10,14 @@
 - **Bugs discovered and fixed:** package manifest dependency entries were initially malformed during setup; corrected before dependency installation. TypeScript target did not support `String.replaceAll`; replaced with compatible regular-expression replacements.
 - **Known limitations:** no real SMS, passwords, document storage, payment processing, full LL/DL workflow persistence, or production deployment yet.
 - **Commit:** `f8153d2` — `Phase 1: add persistent backend and authentication`
+
+## 2026-08-28 — Phase 2: Complete Learner's Licence journey
+
+- **Objective:** port useful LL behavior into Saarthi's persistent Express/SQLite architecture without copying the older vanilla-JS interface or localStorage state model.
+- **Files modified:** `server/db.js`, `server/index.js`, `src/api/client.ts`, `src/App.tsx`, `src/pages/ApplicationFlow.tsx`, `src/pages/Dashboard.tsx`, `plan.md`, `progress.md`, `codex-log.md`, and `checklist.md`.
+- **Architecture decisions:** application details are persisted as a bounded JSON payload; document statuses, payment attempts, learner-test results, and learner licences use dedicated SQLite tables. The server remains the source of truth.
+- **Old-repository behavior adapted:** shared progression, five-question learner quiz/scoring, non-punitive retry copy, demo receipt/reference behavior, print simulation, and a clearly labelled wait state. The old localStorage-only persistence, vanilla-JS renderer, full DL behavior, and camera simulation were intentionally not ported.
+- **Implementation details:** payment success is idempotent; a failed payment creates a distinct persisted attempt; document recovery updates the document state; LL issue writes a six-month validity and 30-day eligibility date; the dashboard derives its active phase from the saved journey step.
+- **Tests run:** `pnpm typecheck`, `pnpm build`, and API-level full LL happy path plus document, payment-failure/retry, and refresh persistence checks.
+- **Bugs fixed:** documents originally advanced the journey after the first ready item; corrected to advance only after all three are ready. Step-only state transitions were initially rejected; corrected to permit validated transitions.
+- **Known limitations:** Phase 3 DL work, comprehensive resources/recovery, AI guidance, and real external services are not implemented.

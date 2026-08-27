@@ -12,27 +12,27 @@
 
 - [x] Dashboard
 - [x] Persistent application
-- [ ] Dynamic full journey
-- [ ] Current-step state machine
+- [x] Dynamic full journey
+- [x] Current-step state machine
 - [ ] Help / recovery
 
 ## Learner's Licence
 
-- [ ] State/RTO
-- [ ] Eligibility
-- [ ] Personal details
-- [ ] Documents
-- [ ] Fitness
-- [ ] Review
-- [ ] Payment
-- [ ] Payment failure
+- [x] State/RTO
+- [x] Eligibility
+- [x] Personal details
+- [x] Documents
+- [x] Fitness
+- [x] Review
+- [x] Payment
+- [x] Payment failure
 - [ ] Appointment/RTO step
-- [ ] LL preparation
-- [ ] LL test
-- [ ] LL pass/fail
-- [ ] LL issuance/download
-- [ ] 30-day waiting period
-- [ ] 6-month validity
+- [x] LL preparation
+- [x] LL test
+- [x] LL pass/fail
+- [x] LL issuance/download
+- [x] 30-day waiting period
+- [x] 6-month validity
 
 ## Driving Licence
 
@@ -78,8 +78,8 @@
 - [ ] API error states
 - [x] Session expiry
 - [x] Duplicate-submit protection
-- [ ] Payment recovery
-- [ ] Document recovery
+- [x] Payment recovery
+- [x] Document recovery
 - [ ] Appointment recovery
 - [x] Page-refresh persistence
 

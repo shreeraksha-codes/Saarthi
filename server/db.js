@@ -50,4 +50,43 @@ db.exec(`
     expires_at TEXT NOT NULL,
     created_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS application_details (
+    application_id TEXT PRIMARY KEY REFERENCES applications(id) ON DELETE CASCADE,
+    data TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    document_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('needed', 'ready', 'rejected', 'replaced')),
+    updated_at TEXT NOT NULL,
+    UNIQUE(application_id, document_type)
+  );
+  CREATE TABLE IF NOT EXISTS payments (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    reference TEXT NOT NULL UNIQUE,
+    method TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('pending', 'successful', 'failed')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS learner_tests (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    score INTEGER NOT NULL,
+    total INTEGER NOT NULL,
+    passed INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS learner_licences (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL UNIQUE REFERENCES applications(id) ON DELETE CASCADE,
+    reference TEXT NOT NULL UNIQUE,
+    issued_at TEXT NOT NULL,
+    valid_until TEXT NOT NULL,
+    eligible_for_dl_at TEXT NOT NULL
+  );
 `);

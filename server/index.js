@@ -38,6 +38,41 @@ function getCurrentApplication(userId) {
     FROM applications WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1`).get(userId);
 }
 
+function getApplication(applicationId) {
+  const application = db.prepare(`SELECT id, user_id AS userId, intent, status, current_step AS currentStep, state, rto,
+    created_at AS createdAt, updated_at AS updatedAt FROM applications WHERE id = ?`).get(applicationId);
+  if (!application) return null;
+  const detail = db.prepare('SELECT data FROM application_details WHERE application_id = ?').get(applicationId);
+  const documents = db.prepare('SELECT document_type AS type, status, updated_at AS updatedAt FROM documents WHERE application_id = ? ORDER BY document_type').all(applicationId);
+  const payment = db.prepare('SELECT id, reference, method, amount, status, created_at AS createdAt, updated_at AS updatedAt FROM payments WHERE application_id = ? ORDER BY created_at DESC LIMIT 1').get(applicationId) || null;
+  const test = db.prepare('SELECT score, total, passed, created_at AS createdAt FROM learner_tests WHERE application_id = ? ORDER BY created_at DESC LIMIT 1').get(applicationId) || null;
+  const licence = db.prepare('SELECT reference, issued_at AS issuedAt, valid_until AS validUntil, eligible_for_dl_at AS eligibleForDlAt FROM learner_licences WHERE application_id = ?').get(applicationId) || null;
+  return { ...application, details: detail ? JSON.parse(detail.data) : {}, documents, payment, test: test ? { ...test, passed: Boolean(test.passed) } : null, licence };
+}
+
+function assertOwner(applicationId, userId) {
+  const application = db.prepare('SELECT id FROM applications WHERE id = ? AND user_id = ?').get(applicationId, userId);
+  if (!application) throw httpError(404, 'Application not found.');
+  return application;
+}
+
+function addEvent(applicationId, eventType, label) {
+  db.prepare('INSERT INTO journey_events (id, application_id, event_type, label, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(id(), applicationId, eventType, label, now());
+}
+
+function updateJourney(applicationId, currentStep, status = currentStep) {
+  db.prepare('UPDATE applications SET current_step = ?, status = ?, updated_at = ? WHERE id = ?').run(currentStep, status, now(), applicationId);
+}
+
+function saveDetails(applicationId, incoming) {
+  const old = db.prepare('SELECT data FROM application_details WHERE application_id = ?').get(applicationId);
+  const data = { ...(old ? JSON.parse(old.data) : {}), ...incoming };
+  db.prepare(`INSERT INTO application_details (application_id, data, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(application_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`).run(applicationId, JSON.stringify(data), now());
+  return data;
+}
+
 function createOrGetApplication(userId, intent) {
   const existing = db.prepare(`SELECT id, user_id AS userId, intent, status, current_step AS currentStep, state, rto,
     created_at AS createdAt, updated_at AS updatedAt FROM applications WHERE user_id = ? AND intent = ?`).get(userId, intent);
@@ -143,7 +178,7 @@ app.get('/api/me', requireAuth, (req, res) => res.json({ user: getUser(req.userI
 app.get('/api/applications/current', requireAuth, (req, res) => {
   const application = getCurrentApplication(req.userId);
   if (!application) throw httpError(404, 'No application found yet.');
-  res.json({ application });
+  res.json({ application: getApplication(application.id) });
 });
 
 app.post('/api/applications', requireAuth, (req, res, next) => {
@@ -178,6 +213,88 @@ app.get('/api/applications/:id/journey', requireAuth, (req, res, next) => {
     const events = db.prepare('SELECT id, event_type AS eventType, label, created_at AS createdAt FROM journey_events WHERE application_id = ? ORDER BY created_at ASC').all(application.id);
     res.json({ events });
   } catch (error) { next(error); }
+});
+
+app.get('/api/applications/:id/full', requireAuth, (req, res, next) => {
+  try { assertOwner(req.params.id, req.userId); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); }
+});
+
+app.patch('/api/applications/:id/details', requireAuth, (req, res, next) => {
+  try {
+    assertOwner(req.params.id, req.userId);
+    const allowed = ['vehicle', 'dob', 'eligibility', 'name', 'phone', 'email', 'address', 'city', 'pin', 'fitnessConfirmed', 'reviewed'];
+    const updates = Object.fromEntries(Object.entries(req.body || {}).filter(([key, value]) => allowed.includes(key) && (typeof value === 'string' || typeof value === 'boolean')));
+    const stage = req.body.nextStep;
+    if (!Object.keys(updates).length && !(typeof stage === 'string' && ['eligibility', 'personal-details', 'documents', 'fitness', 'review', 'payment', 'll-preparation', 'll-test'].includes(stage))) throw httpError(400, 'Provide valid application details.');
+    if (updates.phone && !/^\d{10}$/.test(String(updates.phone).replace(/\D/g, ''))) throw httpError(400, 'Enter a valid 10-digit mobile number.');
+    if (updates.email && !/^\S+@\S+\.\S+$/.test(updates.email)) throw httpError(400, 'Enter a valid email address.');
+    if (updates.dob && Number.isNaN(Date.parse(updates.dob))) throw httpError(400, 'Enter a valid date of birth.');
+    saveDetails(req.params.id, updates);
+    if (typeof req.body.state === 'string' && typeof req.body.rto === 'string' && req.body.state.trim() && req.body.rto.trim()) {
+      db.prepare('UPDATE applications SET state = ?, rto = ?, updated_at = ? WHERE id = ?').run(req.body.state.trim().slice(0, 80), req.body.rto.trim().slice(0, 120), now(), req.params.id);
+    }
+    if (typeof stage === 'string' && ['eligibility', 'personal-details', 'documents', 'fitness', 'review', 'payment', 'll-preparation', 'll-test'].includes(stage)) { updateJourney(req.params.id, stage); addEvent(req.params.id, stage, stage.replace(/-/g, ' ')); }
+    res.json({ application: getApplication(req.params.id) });
+  } catch (error) { next(error); }
+});
+
+app.put('/api/applications/:id/documents/:type', requireAuth, (req, res, next) => {
+  try {
+    assertOwner(req.params.id, req.userId);
+    const type = req.params.type;
+    const status = req.body.status;
+    if (!['identity', 'address', 'photo-signature'].includes(type) || !['needed', 'ready', 'rejected', 'replaced'].includes(status)) throw httpError(400, 'Provide a valid demo document update.');
+    db.prepare(`INSERT INTO documents (id, application_id, document_type, status, updated_at) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(application_id, document_type) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at`).run(id(), req.params.id, type, status, now());
+    const allReady = db.prepare("SELECT COUNT(*) AS count FROM documents WHERE application_id = ? AND status IN ('ready', 'replaced')").get(req.params.id).count === 3;
+    updateJourney(req.params.id, status === 'rejected' || !allReady ? 'documents' : 'fitness');
+    addEvent(req.params.id, `document_${status}`, `${type.replace(/-/g, ' ')} ${status}`);
+    res.json({ application: getApplication(req.params.id) });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/applications/:id/payment', requireAuth, (req, res, next) => {
+  try {
+    assertOwner(req.params.id, req.userId);
+    const method = req.body.method;
+    const outcome = req.body.outcome || 'successful';
+    if (!['UPI', 'Card', 'Net banking'].includes(method) || !['successful', 'failed'].includes(outcome)) throw httpError(400, 'Choose a valid demo payment method.');
+    const existing = db.prepare("SELECT id, reference, method, amount, status, created_at AS createdAt, updated_at AS updatedAt FROM payments WHERE application_id = ? AND status = 'successful' ORDER BY created_at DESC LIMIT 1").get(req.params.id);
+    if (existing) return res.json({ payment: existing, application: getApplication(req.params.id) });
+    const payment = { id: id(), reference: `DEMO-PAY-${crypto.randomUUID().replace(/-/g, '').slice(0, 7).toUpperCase()}`, method, amount: 480, status: outcome, createdAt: now(), updatedAt: now() };
+    db.prepare('INSERT INTO payments (id, application_id, reference, method, amount, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(payment.id, req.params.id, payment.reference, payment.method, payment.amount, payment.status, payment.createdAt, payment.updatedAt);
+    updateJourney(req.params.id, outcome === 'successful' ? 'submitted' : 'payment', outcome === 'successful' ? 'submitted' : 'payment-failed');
+    addEvent(req.params.id, `payment_${outcome}`, `Demo payment ${outcome}`);
+    res.status(201).json({ payment, application: getApplication(req.params.id) });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/applications/:id/submit', requireAuth, (req, res, next) => {
+  try { assertOwner(req.params.id, req.userId); const application = getApplication(req.params.id); if (application.payment?.status !== 'successful') throw httpError(409, 'Complete the demo payment before submitting.'); updateJourney(req.params.id, 'll-preparation', 'submitted'); addEvent(req.params.id, 'submitted', 'Application submitted'); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); }
+});
+
+app.post('/api/applications/:id/learner-test', requireAuth, (req, res, next) => {
+  try {
+    assertOwner(req.params.id, req.userId); const answers = req.body.answers;
+    if (!Array.isArray(answers) || answers.length !== 5 || answers.some((answer) => !Number.isInteger(answer) || answer < 0 || answer > 3)) throw httpError(400, 'Answer every question before submitting.');
+    const correct = [1, 0, 2, 2, 0]; const score = answers.reduce((total, answer, index) => total + (answer === correct[index] ? 1 : 0), 0); const passed = score >= 4;
+    db.prepare('INSERT INTO learner_tests (id, application_id, score, total, passed, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(id(), req.params.id, score, correct.length, passed ? 1 : 0, now());
+    updateJourney(req.params.id, 'll-result', passed ? 'll-test-passed' : 'll-test-failed'); addEvent(req.params.id, passed ? 'll_test_passed' : 'll_test_failed', passed ? 'Learner test passed' : 'Learner test needs another attempt');
+    res.json({ application: getApplication(req.params.id) });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/applications/:id/issue-learner-licence', requireAuth, (req, res, next) => {
+  try {
+    assertOwner(req.params.id, req.userId); const application = getApplication(req.params.id); if (!application.test?.passed) throw httpError(409, 'Pass the learner test before issuing the demo licence.');
+    let licence = application.licence;
+    if (!licence) { const issuedAt = now(); const validUntil = new Date(Date.now() + 183 * 86400000).toISOString(); const eligible = new Date(Date.now() + 30 * 86400000).toISOString(); licence = { reference: `LL-DEMO-${crypto.randomUUID().replace(/-/g, '').slice(0, 7).toUpperCase()}`, issuedAt, validUntil, eligibleForDlAt: eligible }; db.prepare('INSERT INTO learner_licences (id, application_id, reference, issued_at, valid_until, eligible_for_dl_at) VALUES (?, ?, ?, ?, ?, ?)').run(id(), req.params.id, licence.reference, issuedAt, validUntil, eligible); }
+    updateJourney(req.params.id, 'waiting-period', 'll-issued'); addEvent(req.params.id, 'll_issued', 'Learner Licence issued — Demo'); res.json({ application: getApplication(req.params.id) });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/applications/:id/demo/fast-forward-wait', requireAuth, (req, res, next) => {
+  try { assertOwner(req.params.id, req.userId); db.prepare('UPDATE learner_licences SET eligible_for_dl_at = ? WHERE application_id = ?').run(now(), req.params.id); addEvent(req.params.id, 'waiting_period_demo_complete', 'Demo waiting period completed'); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); }
 });
 
 app.use((_req, _res, next) => next(httpError(404, 'That service endpoint does not exist.')));

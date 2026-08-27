@@ -1,7 +1,11 @@
 export type ApplicationIntent = "first-ll" | "existing-ll";
 
 export interface User { id: string; phone: string; name: string | null; email: string | null; }
-export interface Application { id: string; userId: string; intent: ApplicationIntent; status: string; currentStep: string; state: string | null; rto: string | null; createdAt: string; updatedAt: string; }
+export interface DocumentState { type: "identity" | "address" | "photo-signature"; status: "needed" | "ready" | "rejected" | "replaced"; updatedAt: string; }
+export interface Payment { id: string; reference: string; method: string; amount: number; status: "pending" | "successful" | "failed"; createdAt: string; updatedAt: string; }
+export interface LearnerTest { score: number; total: number; passed: boolean; createdAt: string; }
+export interface LearnerLicence { reference: string; issuedAt: string; validUntil: string; eligibleForDlAt: string; }
+export interface Application { id: string; userId: string; intent: ApplicationIntent; status: string; currentStep: string; state: string | null; rto: string | null; createdAt: string; updatedAt: string; details: Record<string, string | boolean>; documents: DocumentState[]; payment: Payment | null; test: LearnerTest | null; licence: LearnerLicence | null; }
 export interface JourneyEvent { id: string; eventType: string; label: string; createdAt: string; }
 
 export class ApiError extends Error { constructor(message: string, public status: number) { super(message); } }
@@ -23,3 +27,11 @@ export function getCurrentApplication() { return request<{ application: Applicat
 export function createApplication(intent: ApplicationIntent) { return request<{ application: Application }>("/api/applications", { method: "POST", body: JSON.stringify({ intent }) }); }
 export function updateApplication(id: string, updates: Partial<Pick<Application, "status" | "currentStep" | "state" | "rto">>) { return request<{ application: Application }>(`/api/applications/${id}`, { method: "PATCH", body: JSON.stringify(updates) }); }
 export function getJourney(id: string) { return request<{ events: JourneyEvent[] }>(`/api/applications/${id}/journey`); }
+export function getApplication(id: string) { return request<{ application: Application }>(`/api/applications/${id}/full`); }
+export function saveApplicationDetails(id: string, details: Record<string, string | boolean>) { return request<{ application: Application }>(`/api/applications/${id}/details`, { method: "PATCH", body: JSON.stringify(details) }); }
+export function updateDocument(id: string, type: DocumentState["type"], status: DocumentState["status"]) { return request<{ application: Application }>(`/api/applications/${id}/documents/${type}`, { method: "PUT", body: JSON.stringify({ status }) }); }
+export function createPayment(id: string, method: string, outcome: "successful" | "failed") { return request<{ payment: Payment; application: Application }>(`/api/applications/${id}/payment`, { method: "POST", body: JSON.stringify({ method, outcome }) }); }
+export function submitApplication(id: string) { return request<{ application: Application }>(`/api/applications/${id}/submit`, { method: "POST" }); }
+export function submitLearnerTest(id: string, answers: number[]) { return request<{ application: Application }>(`/api/applications/${id}/learner-test`, { method: "POST", body: JSON.stringify({ answers }) }); }
+export function issueLearnerLicence(id: string) { return request<{ application: Application }>(`/api/applications/${id}/issue-learner-licence`, { method: "POST" }); }
+export function fastForwardWait(id: string) { return request<{ application: Application }>(`/api/applications/${id}/demo/fast-forward-wait`, { method: "POST" }); }

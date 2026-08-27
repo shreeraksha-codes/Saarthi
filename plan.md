@@ -45,12 +45,12 @@ React 19 + Vite + TypeScript + Tailwind CSS v4, with a Node/Express backend, SQL
 - [x] Persist users, applications, and journey events.
 - [x] Restore authenticated sessions and My Journey after refresh.
 
-### Phase 2 — Complete Learner's Licence journey
+### Phase 2 — Complete Learner's Licence journey ✅ Complete
 
-- [ ] Persist LL application fields and State/RTO selection.
-- [ ] Implement LL eligibility, personal details, documents, fitness, review, and payment states.
-- [ ] Add appointment/RTO step, LL preparation, test, pass/fail, issuance/download, and validity states.
-- [ ] Model the 30-day minimum holding period.
+- [x] Persist LL application fields, State/RTO selection, eligibility, and personal details.
+- [x] Implement document statuses/recovery, fitness, review, demo payment success/failure, and submission states.
+- [x] Add LL preparation, test, pass/fail, issue/download simulation, and validity information.
+- [x] Model the persisted 30-day minimum holding period with a clearly labelled demo fast-forward.
 
 ### Phase 3 — Complete Driving Licence journey
 

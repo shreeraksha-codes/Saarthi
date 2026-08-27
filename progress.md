@@ -9,3 +9,12 @@
 - **Known limitations:** LL/DL workflow data, document storage, payment states, appointments, Resources functionality, recovery actions, and guided mode remain for later phases.
 - **Next phase:** Phase 2 — Complete Learner's Licence journey.
 - **Commit:** `f8153d2`
+
+## 2026-08-28 — Phase 2 complete
+
+- **Objective:** complete the persistent Learner's Licence journey while preserving Saarthi's React/Figma-derived UI.
+- **Files changed:** `server/db.js`, `server/index.js`, `src/api/client.ts`, `src/App.tsx`, `src/pages/ApplicationFlow.tsx`, `src/pages/Dashboard.tsx`, and project tracking documents.
+- **Features implemented:** persisted State/RTO, eligibility and personal details; document checklist with Needed/Ready/Rejected/Replaced recovery states; fitness and review; simulated payment success/failure and server-generated receipt reference; submission; LL preparation; five-question learner test with persisted pass/fail result; demo LL issue/print record; persisted six-month validity and 30-day DL eligibility date.
+- **Tests/checks:** TypeScript check and production build; API end-to-end test through waiting period; payment failure/retry; document progression; session refresh persistence.
+- **Known limitations:** the full DL flow, broader Resources, expanded Help, AI mode, real uploads, real payments, and government integrations remain out of scope for this phase.
+- **Next phase:** Phase 3 — Complete Driving Licence journey.

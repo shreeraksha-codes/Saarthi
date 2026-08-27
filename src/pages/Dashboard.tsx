@@ -22,9 +22,14 @@ function getSteps(intent: Application["intent"]): Step[] {
   ];
 }
 
+function stepIndex(currentStep: string) {
+  const order = ["application-entry", "eligibility", "personal-details", "documents", "fitness", "review", "payment", "submitted", "ll-preparation", "ll-test", "ll-result", "waiting-period"];
+  return Math.max(0, order.indexOf(currentStep));
+}
+
 export default function Dashboard({ onNavigate, user, application }: DashboardProps) {
   const existingLl = application.intent === "existing-ll";
-  const steps = getSteps(application.intent);
+  const steps = getSteps(application.intent).map((step, index) => ({ ...step, status: application.intent === "first-ll" ? (index < Math.min(stepIndex(application.currentStep), 10) ? "done" : index === Math.min(stepIndex(application.currentStep), 10) ? "active" : "upcoming") : step.status }));
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-5 pt-10 pb-24">
@@ -56,15 +61,15 @@ export default function Dashboard({ onNavigate, user, application }: DashboardPr
               <div className="text-xs font-medium text-teal-200 uppercase tracking-widest mb-3">
                 Your next step
               </div>
-              <h2 className="text-xl font-semibold mb-2">{existingLl ? "Start your Driving Licence application" : "Continue your Learner's Licence application"}</h2>
+              <h2 className="text-xl font-semibold mb-2">{existingLl ? "Start your Driving Licence application" : application.currentStep === "waiting-period" && application.licence ? `${Math.max(0, Math.ceil((new Date(application.licence.eligibleForDlAt).getTime() - Date.now()) / 86400000))} days before your Driving Licence journey` : "Continue your Learner's Licence application"}</h2>
               <p className="text-sm text-teal-100 leading-relaxed mb-1">
-                <span className="font-medium text-white">What you need to do:</span> Add the details needed to begin this application.
+                <span className="font-medium text-white">What you need to do:</span> {application.currentStep === "waiting-period" ? "Practise safely and keep your learner licence details ready." : "Complete the current step in your saved application."}
               </p>
               <p className="text-sm text-teal-100 leading-relaxed mb-1">
-                <span className="font-medium text-white">Why it matters:</span> We’ll use this information to guide the rest of your journey.
+                <span className="font-medium text-white">Why it matters:</span> Your journey is saved and shows one clear next action.
               </p>
               <p className="text-sm text-teal-100 leading-relaxed mb-5">
-                <span className="font-medium text-white">What happens next:</span> Your journey will show one clear step at a time.
+                <span className="font-medium text-white">What happens next:</span> The next stage unlocks when this demo requirement is complete.
               </p>
               <button
                 onClick={() => onNavigate("apply")}
