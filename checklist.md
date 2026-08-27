@@ -89,10 +89,10 @@
 ## Final submission
 
 - [x] Production build
-- [ ] Full end-to-end test
-- [ ] Negative-path test
+- [x] Full end-to-end test
+- [x] Negative-path test
 - [x] Mobile test
-- [ ] Accessibility test
+- [x] Accessibility test (native 125%–200% zoom remains manual)
 - [ ] Deployment
 - [x] GitHub final push
 - [ ] Demo video

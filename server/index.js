@@ -2,6 +2,8 @@ import 'dotenv/config';
 import cookieParser from 'cookie-parser';
 import crypto from 'node:crypto';
 import express from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
 import { db } from './db.js';
 
 const app = express();
@@ -9,12 +11,14 @@ const port = Number(process.env.PORT || 3001);
 const sessionDays = Number(process.env.SESSION_DAYS || 14);
 const cookieSecret = process.env.SESSION_SECRET || 'saarthi-development-secret-change-me';
 const DEMO_OTP = '123456';
+const clientDist = path.resolve('dist');
 const now = () => new Date().toISOString();
 const expiresAt = (minutes) => new Date(Date.now() + minutes * 60_000).toISOString();
 const id = () => crypto.randomUUID();
 
 app.use(express.json({ limit: '20kb' }));
 app.use(cookieParser(cookieSecret));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'saarthi-api' }));
 
 function httpError(status, message) {
   const error = new Error(message);
@@ -368,7 +372,15 @@ app.post('/api/ai/application-message', requireAuth, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-app.use((_req, _res, next) => next(httpError(404, 'That service endpoint does not exist.')));
+app.use('/api', (_req, _res, next) => next(httpError(404, 'That service endpoint does not exist.')));
+
+if (process.env.NODE_ENV === 'production') {
+  if (!fs.existsSync(clientDist)) throw new Error('Production frontend build is missing. Run pnpm build before pnpm start.');
+  app.use(express.static(clientDist, { index: false, maxAge: '1h' }));
+  app.get('/{*splat}', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+}
+
+app.use((_req, _res, next) => next(httpError(404, 'That page does not exist.')));
 app.use((error, _req, res, _next) => {
   const status = error.status || 500;
   if (status >= 500) console.error(error);

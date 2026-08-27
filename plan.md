@@ -77,8 +77,8 @@ React 19 + Vite + TypeScript + Tailwind CSS v4, with a Node/Express backend, SQL
 - [ ] Verify 125%–200% native browser zoom (the available browser exposes no page-zoom control; effective-width checks passed but are not a substitute).
 - [x] Review the production bundle, dependencies, and existing low-connectivity/fallback behavior; avoid adding runtime weight or repeated requests.
 
-### Phase 6 — Final testing + deployment + submission
+### Phase 6 — Final verification + deployment readiness ✅ Complete
 
-- [ ] Run complete happy-path and recovery-path testing.
-- [ ] Complete mobile and accessibility checks.
-- [ ] Deploy, prepare demo materials, and submit.
+- [x] Run clean-database Learner's Licence and existing-Learner's-Licence happy paths, including delivery completion and recovery branches.
+- [x] Verify production static serving, health endpoint, secret handling, and responsive/accessibility baseline; native 125%–200% browser zoom remains a manual post-deployment check.
+- [x] Prepare a single-service Render deployment path with persistent SQLite storage. Deployment, demo materials, and submission remain user-controlled actions.

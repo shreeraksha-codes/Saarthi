@@ -59,3 +59,12 @@
 - **Performance decisions:** retained the current dependency set and static CSS approach; no animation library, image asset, API request, or application state model was added. Production output is 75.86 kB gzip JavaScript and 5.81 kB gzip CSS.
 - **Tests run:** `pnpm typecheck`; `pnpm build`; server syntax check; static audit of landmarks, labels, dialogs, print controls, and responsive containers.
 - **Responsive verification:** live preview checks at 320px, 360px, 390px, 412px, desktop, and effective desktop widths down to 640px found no important horizontal overflow. The navigation wrapped cleanly; the Apply action remained visible; all rendered form-choice buttons were at least 44px tall; and the Resources dialog fit the viewport, exposed its Close control to keyboard focus, and used internal vertical scrolling. The browser did not honor page-zoom keyboard commands or expose a native zoom control, so 125%–200% native zoom remains unverified rather than inferred.
+
+## 2026-08-28 — Phase 6: Final verification and deployment readiness
+
+- **Objective:** complete final regression validation and production serving preparation without adding product features or redesigning the UI.
+- **Files modified:** `server/index.js`, `.env.example`, `.figma/make/site.json`, `README.md`, `plan.md`, `progress.md`, `codex-log.md`, and `checklist.md`.
+- **Production decision:** Express now serves `dist` in production after API routes, with an SPA fallback for client-side navigation. It remains a single same-origin service, so development-only Vite proxy configuration does not apply in production. SQLite is explicitly configured through `DATABASE_PATH`, and `/api/health` supports a platform health check.
+- **Tests run:** a fresh SQLite production-mode server completed both full API journeys and all required recovery scenarios; production SPA and health endpoint requests; `pnpm typecheck`; `pnpm build`; `node --check server/index.js`; unauthenticated API/session-expiry guard; secret scan; ignored `.env` check; and `git diff --check`.
+- **OpenAI result:** real provider call not executed because no `OPENAI_API_KEY` is configured. The same production-mode run verified deterministic fallback, strict field allowlisting, and confirmation-before-save.
+- **Deployment readiness:** documented Render build/start commands, environment variables, health endpoint, and persistent disk requirement in `README.md`. No account or service was deployed to.

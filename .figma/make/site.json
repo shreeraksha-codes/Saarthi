@@ -1,5 +1,6 @@
 {
-  "description": "Create and customize professional templates effortlessly for various needs, streamlining design for businesses, educators, and individuals.",
+  "title": "Saarthi Citizen Journey",
+  "description": "A simulated Learner's Licence to Driving Licence journey for the Saarthi hackathon prototype.",
   "robots": {
     "index": false
   },
