@@ -1,0 +1,77 @@
+# Sarathi Citizen Journey — Master Plan
+
+## Product and goal
+
+**Product:** Sarathi Citizen Journey
+
+**Goal:** provide a simpler citizen-facing journey from **New Learner's Licence → Full Driving Licence**.
+
+## Scope
+
+Included:
+
+- First Learner's Licence
+- Existing Learner's Licence → Full Driving Licence
+
+Out of scope:
+
+- Renewal
+- Duplicate licence
+- Licence upgrade
+- International licence
+- Other Parivahan services
+- “Something else”
+
+## UX principles
+
+- Government process underneath, consumer-grade simplicity on top
+- Mobile-first and accessible to senior citizens
+- Lightweight on slow connections
+- A clear next action at every stage
+- Public Resources; login only when needed
+- My Journey is the central personalized dashboard
+- AI guidance and the Classic Form share the same application data
+
+## Technical architecture
+
+React 19 + Vite + TypeScript + Tailwind CSS v4, with a Node/Express backend, SQLite persistence, HTTP-only session cookie, and REST API.
+
+## Delivery phases
+
+### Phase 1 — Backend foundation + persistent journey ✅ Complete
+
+- [x] Create the Express + SQLite foundation.
+- [x] Add demo OTP authentication with HTTP-only sessions.
+- [x] Persist users, applications, and journey events.
+- [x] Restore authenticated sessions and My Journey after refresh.
+
+### Phase 2 — Complete Learner's Licence journey
+
+- [ ] Persist LL application fields and State/RTO selection.
+- [ ] Implement LL eligibility, personal details, documents, fitness, review, and payment states.
+- [ ] Add appointment/RTO step, LL preparation, test, pass/fail, issuance/download, and validity states.
+- [ ] Model the 30-day minimum holding period.
+
+### Phase 3 — Complete Driving Licence journey
+
+- [ ] Build the existing-LL continuation path and carried-forward information.
+- [ ] Implement DL application, payment, appointment, RTO preparation, and vehicle reminder.
+- [ ] Implement driving-test pass/fail, retest, issuance, dispatch, and delivery states.
+
+### Phase 4 — Resources + Help/Recovery + AI-guided mode
+
+- [ ] Make Resources content and interactive cards functional.
+- [ ] Connect help and recovery paths to the persisted application state.
+- [ ] Add an AI-guided mode that writes to the same application data as the Classic Form.
+
+### Phase 5 — Accessibility + visual polish + performance
+
+- [ ] Improve readable typography, focus treatment, touch targets, and responsive behavior.
+- [ ] Verify 125%, 150%, and 200% browser zoom without clipping or horizontal overflow.
+- [ ] Review performance on low-end mobile and slow connections.
+
+### Phase 6 — Final testing + deployment + submission
+
+- [ ] Run complete happy-path and recovery-path testing.
+- [ ] Complete mobile and accessibility checks.
+- [ ] Deploy, prepare demo materials, and submit.
