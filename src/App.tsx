@@ -7,9 +7,10 @@ import SignIn from "./pages/SignIn";
 import Dashboard from "./pages/Dashboard";
 import ApplicationFlow from "./pages/ApplicationFlow";
 import Help from "./pages/Help";
+import GuidedApplication from "./pages/GuidedApplication";
 import { ApiError, type Application, type User, getCurrentApplication, getCurrentUser, logout } from "./api/client";
 
-type Page = "landing" | "resources" | "entry" | "signin" | "dashboard" | "apply" | "help";
+type Page = "landing" | "resources" | "entry" | "signin" | "dashboard" | "apply" | "help" | "guided";
 
 export default function App() {
   const [page, setPage] = useState<Page>("landing");
@@ -70,7 +71,8 @@ export default function App() {
       {page === "signin" && <SignIn onNavigate={navigate} navData={navData} onAuthenticated={handleAuthenticated} />}
       {page === "dashboard" && application && <Dashboard onNavigate={navigate} user={user} application={application} />}
       {page === "apply" && application && <ApplicationFlow application={application} onUpdated={setApplication} onNavigate={navigate} />}
-      {page === "help" && <Help onNavigate={navigate} />}
+      {page === "guided" && application && <GuidedApplication application={application} onUpdated={setApplication} onNavigate={navigate} />}
+      {page === "help" && <Help onNavigate={navigate} application={application} />}
     </div>
   );
 }

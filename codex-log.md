@@ -30,3 +30,13 @@
 - **Implementation details:** existing-LL applications may start DL directly; completed LL applications are gated by the persisted eligibility date. DL payment is idempotent after success; appointment slots are bounded demo inventory; a driving test stores every attempt; delivery advances deterministically from issued to delivered.
 - **Tests run:** `pnpm typecheck`, `pnpm build`, clean-database existing-LL happy path, payment failure/retry and duplicate-success protection, unavailable appointment rejection, cancellation/rescheduling, driving-test failure/retest, delivery progression, LL waiting-period gate, and refresh/session persistence.
 - **Known limitations:** no real booking, payment, licence creation, postal service, or state/RTO data integration. The full Resources, generalized Help, and AI-guided work remain for Phase 4.
+
+## 2026-08-28 — Phase 4: Resources, Help, and guided application
+
+- **Objective:** make public resources useful, provide contextual recovery, and add a safe alternate application interface.
+- **Files modified:** `server/index.js`, `src/api/client.ts`, `src/App.tsx`, `src/pages/Resources.tsx`, `src/pages/Help.tsx`, `src/pages/GuidedApplication.tsx`, `src/pages/Dashboard.tsx`, and tracking documents.
+- **Architecture decisions:** use a deterministic backend guide because no external LLM is configured. It accepts only vehicle, state, and name messages, updates only allowlisted fields, uses the current application ID, and never receives documents, OTPs, or payment details.
+- **Implementation details:** Resources are public modal guides; Help inspects persisted document/payment/wait states before selecting a recovery action; users can switch from guided mode to the Classic Form with server-persisted answers intact.
+- **Tests run:** `pnpm typecheck`, `pnpm build`, guided field persistence, clarification behavior, allowlist validation, and session persistence.
+- **Bug fixed:** arbitrary guided field names were initially accepted as generic questions; the backend now rejects fields outside the allowlist.
+- **Known limitations:** no external LLM, multilingual support, or full official guidance corpus. The deterministic guide is intentionally limited and has a Classic Form fallback.

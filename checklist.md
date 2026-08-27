@@ -3,7 +3,7 @@
 ## Public experience
 
 - [x] Landing page
-- [ ] Resources functional
+- [x] Resources functional
 - [x] Application choice
 - [x] Login
 - [x] Demo OTP
@@ -14,7 +14,7 @@
 - [x] Persistent application
 - [x] Dynamic full journey
 - [x] Current-step state machine
-- [ ] Help / recovery
+- [x] Help / recovery
 
 ## Learner's Licence
 
@@ -52,12 +52,12 @@
 
 ## AI-guided mode
 
-- [ ] Same application data as classic form
-- [ ] One-question-at-a-time interface
-- [ ] Clarification handling
+- [x] Same application data as classic form
+- [x] One-question-at-a-time interface
+- [x] Clarification handling
 - [ ] Review/edit
-- [ ] Fallback to classic form
-- [ ] No sensitive data unnecessarily sent to LLM
+- [x] Fallback to classic form
+- [x] No sensitive data unnecessarily sent to LLM
 
 ## Accessibility
 

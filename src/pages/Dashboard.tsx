@@ -86,11 +86,12 @@ export default function Dashboard({ onNavigate, user, application }: DashboardPr
                 { icon: "📄", label: "Documents" },
                 { icon: "💳", label: "Payments" },
                 { icon: "📅", label: "Appointments" },
+                { icon: "✨", label: "Guided help" },
                 { icon: "🆘", label: "I'm stuck" },
               ].map((item) => (
                 <button
                   key={item.label}
-                  onClick={() => item.label === "I'm stuck" ? onNavigate("help") : undefined}
+                  onClick={() => item.label === "I'm stuck" ? onNavigate("help") : item.label === "Guided help" ? onNavigate("guided") : onNavigate("apply")}
                   className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-white border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all text-center"
                 >
                   <span className="text-2xl">{item.icon}</span>

@@ -335,6 +335,23 @@ app.get('/api/applications/:id/licence', requireAuth, (req, res, next) => { try 
 app.get('/api/applications/:id/delivery', requireAuth, (req, res, next) => { try { assertOwner(req.params.id, req.userId); const licence = getApplication(req.params.id).dl?.licence; if (!licence) throw httpError(404, 'Delivery is not available yet.'); res.json({ delivery: licence }); } catch (error) { next(error); } });
 app.post('/api/applications/:id/delivery/advance', requireAuth, (req, res, next) => { try { assertOwner(req.params.id, req.userId); const sequence = ['issued', 'printed', 'dispatched', 'delivered']; const licence = getApplication(req.params.id).dl?.licence; if (!licence) throw httpError(404, 'Driving Licence record not found.'); const nextStatus = sequence[Math.min(sequence.indexOf(licence.deliveryStatus) + 1, sequence.length - 1)]; db.prepare('UPDATE driving_licences SET delivery_status = ?, updated_at = ? WHERE application_id = ?').run(nextStatus, now(), req.params.id); updateJourney(req.params.id, 'dl-delivery', nextStatus === 'delivered' ? 'dl-delivered' : `dl-${nextStatus}`); addEvent(req.params.id, `dl_${nextStatus}`, `Driving Licence ${nextStatus} — Demo`); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); } });
 
+app.post('/api/ai/application-message', requireAuth, (req, res, next) => {
+  try {
+    const applicationId = req.body.applicationId; assertOwner(applicationId, req.userId);
+    const message = String(req.body.message || '').trim().slice(0, 300); const field = String(req.body.field || 'vehicle');
+    if (!message) throw httpError(400, 'Write a response before sending.');
+    if (!['vehicle', 'state', 'name'].includes(field)) throw httpError(400, 'That guided field is not available. Switch to the classic form for other details.');
+    const application = getApplication(applicationId); const lower = message.toLowerCase(); let reply = ''; let updates = {};
+    if (/proof of address|address proof/.test(lower)) reply = 'Proof of address means a document showing where you currently live. Accepted documents can vary by state/RTO.';
+    else if (field === 'vehicle') { const vehicle = /both|bike.*car|car.*bike/.test(lower) ? 'LMV — Light Motor Vehicle and motorcycle (confirm at RTO)' : /car|lmv/.test(lower) ? 'LMV — Light Motor Vehicle' : /motor|bike|scooter/.test(lower) ? 'MCWG — Motorcycle with Gear' : ''; if (!vehicle) reply = 'Please choose a vehicle class: motorcycle or car. Your state/RTO confirms the final category.'; else { updates = { vehicle }; reply = `I understood: ${vehicle}. Please confirm this in the classic form before submitting.`; } }
+    else if (field === 'name') { updates = { name: message }; reply = 'I saved that as your full name. Check it matches your document.'; }
+    else if (field === 'state') { const allowed = ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu']; const state = allowed.find((item) => item.toLowerCase() === lower); if (!state) reply = 'Choose Maharashtra, Karnataka, Delhi, or Tamil Nadu in this demo. Requirements can vary by state/RTO.'; else { updates = { state }; reply = `I saved ${state}. Choose your RTO in the classic form.`; } }
+    else reply = 'I can help with vehicle class, state/RTO, personal details, documents, and fitness. This is AI-assisted demo guidance, not official advice.';
+    if (Object.keys(updates).length) { if (updates.state) db.prepare('UPDATE applications SET state = ?, updated_at = ? WHERE id = ?').run(updates.state, now(), applicationId); else saveDetails(applicationId, updates); addEvent(applicationId, 'guided_application_update', 'Guided application answer saved'); }
+    res.json({ reply, updatedFields: Object.keys(updates), application: getApplication(applicationId) });
+  } catch (error) { next(error); }
+});
+
 app.use((_req, _res, next) => next(httpError(404, 'That service endpoint does not exist.')));
 app.use((error, _req, res, _next) => {
   const status = error.status || 500;

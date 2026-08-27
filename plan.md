@@ -58,11 +58,11 @@ React 19 + Vite + TypeScript + Tailwind CSS v4, with a Node/Express backend, SQL
 - [x] Implement DL application, payment, appointment, RTO preparation, and vehicle reminder.
 - [x] Implement driving-test pass/fail, retest, issuance, dispatch, and delivery states.
 
-### Phase 4 — Resources + Help/Recovery + AI-guided mode
+### Phase 4 — Resources + Help/Recovery + AI-guided mode ✅ Complete
 
-- [ ] Make Resources content and interactive cards functional.
-- [ ] Connect help and recovery paths to the persisted application state.
-- [ ] Add an AI-guided mode that writes to the same application data as the Classic Form.
+- [x] Make Resources content and interactive cards functional.
+- [x] Connect help and recovery paths to the persisted application state.
+- [x] Add a deterministic guided mode that writes to the same application data as the Classic Form.
 
 ### Phase 5 — Accessibility + visual polish + performance
 

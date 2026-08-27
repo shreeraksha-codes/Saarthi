@@ -27,3 +27,12 @@
 - **Tests/checks:** TypeScript check, production build, existing-LL full API journey, payment failure/retry and duplicate-success protection, unavailable-slot handling, appointment cancellation/rescheduling, driving-test failure/retest, delivery progression, LL waiting-period gate, and refresh/session persistence.
 - **Known limitations:** availability, payments, documents, issuance, and delivery are deliberately simulated; Phase 4 Resources/Help/AI work remains.
 - **Next phase:** Phase 4 — Resources + Help/Recovery + AI-guided mode.
+
+## 2026-08-28 — Phase 4 complete
+
+- **Objective:** make public learning resources actionable, connect Help to saved journey state, and add an AI-assisted interface without creating a second application.
+- **Files changed:** `server/index.js`, `src/api/client.ts`, `src/App.tsx`, `src/pages/Resources.tsx`, `src/pages/Help.tsx`, `src/pages/GuidedApplication.tsx`, `src/pages/Dashboard.tsx`, and tracking documents.
+- **Features implemented:** ten public resource guides; contextual recovery actions for waiting, rejected documents, payment problems, blocked progress, and next-step guidance; deterministic backend guided messages for vehicle, state, and name that persist to the existing application.
+- **Tests/checks:** TypeScript check, production build, authenticated guided update/persistence, clarification response, allowlist rejection, and session refresh.
+- **Known limitations:** guidance is deterministic rather than an external LLM; Resources are concise in-product guides, not a complete official content library.
+- **Next phase:** Phase 5 — Accessibility + visual polish + performance.

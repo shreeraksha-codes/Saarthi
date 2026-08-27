@@ -49,3 +49,4 @@ export function startDrivingTest(applicationId: string) { return request<{ appli
 export function submitDrivingTest(applicationId: string, checks: boolean[]) { return request<{ application: Application }>("/api/tests/driving/submit", { method: "POST", body: JSON.stringify({ applicationId, checks }) }); }
 export function issueDrivingLicence(id: string) { return request<{ application: Application }>(`/api/applications/${id}/dl/issue`, { method: "POST" }); }
 export function advanceDelivery(id: string) { return request<{ application: Application }>(`/api/applications/${id}/delivery/advance`, { method: "POST" }); }
+export function guidedApplicationMessage(applicationId: string, field: "vehicle" | "state" | "name", message: string) { return request<{ reply: string; updatedFields: string[]; application: Application }>("/api/ai/application-message", { method: "POST", body: JSON.stringify({ applicationId, field, message }) }); }
