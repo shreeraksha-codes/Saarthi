@@ -5,7 +5,11 @@ export interface DocumentState { type: "identity" | "address" | "photo-signature
 export interface Payment { id: string; reference: string; method: string; amount: number; status: "pending" | "successful" | "failed"; createdAt: string; updatedAt: string; }
 export interface LearnerTest { score: number; total: number; passed: boolean; createdAt: string; }
 export interface LearnerLicence { reference: string; issuedAt: string; validUntil: string; eligibleForDlAt: string; }
-export interface Application { id: string; userId: string; intent: ApplicationIntent; status: string; currentStep: string; state: string | null; rto: string | null; createdAt: string; updatedAt: string; details: Record<string, string | boolean>; documents: DocumentState[]; payment: Payment | null; test: LearnerTest | null; licence: LearnerLicence | null; }
+export interface Appointment { id: string; slot: string; status: "booked" | "cancelled"; createdAt: string; updatedAt: string; }
+export interface DrivingTest { score: number; total: number; passed: boolean; createdAt: string; }
+export interface DrivingLicence { reference: string; issuedAt: string; deliveryStatus: "issued" | "printed" | "dispatched" | "delivered"; updatedAt: string; }
+export interface DlJourney { data: Record<string, string>; status: string; updatedAt: string; payment: Payment | null; appointment: Appointment | null; drivingTest: DrivingTest | null; licence: DrivingLicence | null; }
+export interface Application { id: string; userId: string; intent: ApplicationIntent; status: string; currentStep: string; state: string | null; rto: string | null; createdAt: string; updatedAt: string; details: Record<string, string | boolean>; documents: DocumentState[]; payment: Payment | null; test: LearnerTest | null; licence: LearnerLicence | null; dl: DlJourney | null; }
 export interface JourneyEvent { id: string; eventType: string; label: string; createdAt: string; }
 
 export class ApiError extends Error { constructor(message: string, public status: number) { super(message); } }
@@ -35,3 +39,13 @@ export function submitApplication(id: string) { return request<{ application: Ap
 export function submitLearnerTest(id: string, answers: number[]) { return request<{ application: Application }>(`/api/applications/${id}/learner-test`, { method: "POST", body: JSON.stringify({ answers }) }); }
 export function issueLearnerLicence(id: string) { return request<{ application: Application }>(`/api/applications/${id}/issue-learner-licence`, { method: "POST" }); }
 export function fastForwardWait(id: string) { return request<{ application: Application }>(`/api/applications/${id}/demo/fast-forward-wait`, { method: "POST" }); }
+export function startDl(id: string) { return request<{ application: Application }>(`/api/applications/${id}/dl`, { method: "POST" }); }
+export function saveDl(id: string, data: Record<string, string>) { return request<{ application: Application }>(`/api/applications/${id}/dl`, { method: "PATCH", body: JSON.stringify(data) }); }
+export function createDlPayment(id: string, method: string, outcome: "successful" | "failed") { return request<{ payment: Payment; application: Application }>(`/api/applications/${id}/dl/payment`, { method: "POST", body: JSON.stringify({ method, outcome }) }); }
+export function getAppointmentSlots() { return request<{ slots: string[] }>("/api/appointments/availability"); }
+export function bookAppointment(applicationId: string, slot: string) { return request<{ application: Application }>("/api/appointments", { method: "POST", body: JSON.stringify({ applicationId, slot }) }); }
+export function cancelAppointment(id: string) { return request<{ application: Application }>(`/api/appointments/${id}`, { method: "PATCH", body: JSON.stringify({ status: "cancelled" }) }); }
+export function startDrivingTest(applicationId: string) { return request<{ application: Application }>("/api/tests/driving/start", { method: "POST", body: JSON.stringify({ applicationId }) }); }
+export function submitDrivingTest(applicationId: string, checks: boolean[]) { return request<{ application: Application }>("/api/tests/driving/submit", { method: "POST", body: JSON.stringify({ applicationId, checks }) }); }
+export function issueDrivingLicence(id: string) { return request<{ application: Application }>(`/api/applications/${id}/dl/issue`, { method: "POST" }); }
+export function advanceDelivery(id: string) { return request<{ application: Application }>(`/api/applications/${id}/delivery/advance`, { method: "POST" }); }

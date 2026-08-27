@@ -18,3 +18,12 @@
 - **Tests/checks:** TypeScript check and production build; API end-to-end test through waiting period; payment failure/retry; document progression; session refresh persistence.
 - **Known limitations:** the full DL flow, broader Resources, expanded Help, AI mode, real uploads, real payments, and government integrations remain out of scope for this phase.
 - **Next phase:** Phase 3 — Complete Driving Licence journey.
+
+## 2026-08-28 — Phase 3 complete
+
+- **Objective:** complete the persisted Driving Licence journey for existing-LL users and LL users whose simulated waiting period is satisfied.
+- **Files changed:** `server/db.js`, `server/index.js`, `src/api/client.ts`, `src/pages/ApplicationFlow.tsx`, `src/pages/DrivingLicenceFlow.tsx`, `src/pages/Dashboard.tsx`, and tracking documents.
+- **Features implemented:** carried-forward DL review, demo DL fee/payment recovery, appointment selection/confirmation, RTO preparation and printing, deterministic driving-test pass/fail/retest, demo DL issue/print, and persisted print/dispatch/delivery progression.
+- **Tests/checks:** TypeScript check, production build, existing-LL full API journey, payment failure/retry and duplicate-success protection, unavailable-slot handling, appointment cancellation/rescheduling, driving-test failure/retest, delivery progression, LL waiting-period gate, and refresh/session persistence.
+- **Known limitations:** availability, payments, documents, issuance, and delivery are deliberately simulated; Phase 4 Resources/Help/AI work remains.
+- **Next phase:** Phase 4 — Resources + Help/Recovery + AI-guided mode.

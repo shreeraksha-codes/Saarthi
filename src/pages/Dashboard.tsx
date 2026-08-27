@@ -30,6 +30,7 @@ function stepIndex(currentStep: string) {
 export default function Dashboard({ onNavigate, user, application }: DashboardProps) {
   const existingLl = application.intent === "existing-ll";
   const steps = getSteps(application.intent).map((step, index) => ({ ...step, status: application.intent === "first-ll" ? (index < Math.min(stepIndex(application.currentStep), 10) ? "done" : index === Math.min(stepIndex(application.currentStep), 10) ? "active" : "upcoming") : step.status }));
+  const nextTitle = application.currentStep === "dl-appointment" ? "Book your driving-test appointment" : application.currentStep === "dl-rto-preparation" ? "Get ready for your RTO visit" : application.currentStep === "dl-driving-test" ? "Complete your demo driving test" : application.currentStep === "dl-driving-result" && application.dl?.drivingTest?.passed ? "Your Driving Licence is being issued" : application.currentStep === "dl-delivery" && application.dl?.licence?.deliveryStatus === "dispatched" ? "Your licence is on its way" : existingLl ? "Start your Driving Licence application" : application.currentStep === "waiting-period" && application.licence ? `${Math.max(0, Math.ceil((new Date(application.licence.eligibleForDlAt).getTime() - Date.now()) / 86400000))} days before your Driving Licence journey` : "Continue your Learner's Licence application";
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-5 pt-10 pb-24">
@@ -61,7 +62,7 @@ export default function Dashboard({ onNavigate, user, application }: DashboardPr
               <div className="text-xs font-medium text-teal-200 uppercase tracking-widest mb-3">
                 Your next step
               </div>
-              <h2 className="text-xl font-semibold mb-2">{existingLl ? "Start your Driving Licence application" : application.currentStep === "waiting-period" && application.licence ? `${Math.max(0, Math.ceil((new Date(application.licence.eligibleForDlAt).getTime() - Date.now()) / 86400000))} days before your Driving Licence journey` : "Continue your Learner's Licence application"}</h2>
+              <h2 className="text-xl font-semibold mb-2">{nextTitle}</h2>
               <p className="text-sm text-teal-100 leading-relaxed mb-1">
                 <span className="font-medium text-white">What you need to do:</span> {application.currentStep === "waiting-period" ? "Practise safely and keep your learner licence details ready." : "Complete the current step in your saved application."}
               </p>

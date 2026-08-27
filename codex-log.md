@@ -21,3 +21,12 @@
 - **Tests run:** `pnpm typecheck`, `pnpm build`, and API-level full LL happy path plus document, payment-failure/retry, and refresh persistence checks.
 - **Bugs fixed:** documents originally advanced the journey after the first ready item; corrected to advance only after all three are ready. Step-only state transitions were initially rejected; corrected to permit validated transitions.
 - **Known limitations:** Phase 3 DL work, comprehensive resources/recovery, AI guidance, and real external services are not implemented.
+
+## 2026-08-28 — Phase 3: Complete Driving Licence journey
+
+- **Objective:** complete the DL continuation path using the same Express/SQLite application record and Figma-derived visual language.
+- **Files modified:** `server/db.js`, `server/index.js`, `src/api/client.ts`, `src/pages/ApplicationFlow.tsx`, `src/pages/DrivingLicenceFlow.tsx`, `src/pages/Dashboard.tsx`, and the project tracking documents.
+- **Architecture decisions:** a `dl_applications` row carries forward relevant LL data without duplicating the user/application; dedicated appointment, driving-test, and driving-licence tables persist DL-only history. Payments are tagged by stage.
+- **Implementation details:** existing-LL applications may start DL directly; completed LL applications are gated by the persisted eligibility date. DL payment is idempotent after success; appointment slots are bounded demo inventory; a driving test stores every attempt; delivery advances deterministically from issued to delivered.
+- **Tests run:** `pnpm typecheck`, `pnpm build`, clean-database existing-LL happy path, payment failure/retry and duplicate-success protection, unavailable appointment rejection, cancellation/rescheduling, driving-test failure/retest, delivery progression, LL waiting-period gate, and refresh/session persistence.
+- **Known limitations:** no real booking, payment, licence creation, postal service, or state/RTO data integration. The full Resources, generalized Help, and AI-guided work remain for Phase 4.

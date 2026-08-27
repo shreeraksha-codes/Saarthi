@@ -52,11 +52,11 @@ React 19 + Vite + TypeScript + Tailwind CSS v4, with a Node/Express backend, SQL
 - [x] Add LL preparation, test, pass/fail, issue/download simulation, and validity information.
 - [x] Model the persisted 30-day minimum holding period with a clearly labelled demo fast-forward.
 
-### Phase 3 — Complete Driving Licence journey
+### Phase 3 — Complete Driving Licence journey ✅ Complete
 
-- [ ] Build the existing-LL continuation path and carried-forward information.
-- [ ] Implement DL application, payment, appointment, RTO preparation, and vehicle reminder.
-- [ ] Implement driving-test pass/fail, retest, issuance, dispatch, and delivery states.
+- [x] Build the existing-LL continuation path and carried-forward information.
+- [x] Implement DL application, payment, appointment, RTO preparation, and vehicle reminder.
+- [x] Implement driving-test pass/fail, retest, issuance, dispatch, and delivery states.
 
 ### Phase 4 — Resources + Help/Recovery + AI-guided mode
 

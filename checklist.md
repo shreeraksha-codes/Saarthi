@@ -36,19 +36,19 @@
 
 ## Driving Licence
 
-- [ ] Existing-LL entry path
-- [ ] Carry-forward information
-- [ ] DL application
-- [ ] DL payment
-- [ ] Appointment
-- [ ] RTO preparation
-- [ ] Appropriate vehicle reminder
-- [ ] Driving competence test
-- [ ] Pass path
-- [ ] Fail/retest path
-- [ ] Licence issuance
-- [ ] Dispatch
-- [ ] Delivery
+- [x] Existing-LL entry path
+- [x] Carry-forward information
+- [x] DL application
+- [x] DL payment
+- [x] Appointment
+- [x] RTO preparation
+- [x] Appropriate vehicle reminder
+- [x] Driving competence test
+- [x] Pass path
+- [x] Fail/retest path
+- [x] Licence issuance
+- [x] Dispatch
+- [x] Delivery
 
 ## AI-guided mode
 
@@ -80,7 +80,7 @@
 - [x] Duplicate-submit protection
 - [x] Payment recovery
 - [x] Document recovery
-- [ ] Appointment recovery
+- [x] Appointment recovery
 - [x] Page-refresh persistence
 
 ## Final submission

@@ -89,4 +89,37 @@ db.exec(`
     valid_until TEXT NOT NULL,
     eligible_for_dl_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS dl_applications (
+    application_id TEXT PRIMARY KEY REFERENCES applications(id) ON DELETE CASCADE,
+    data TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS appointments (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL UNIQUE REFERENCES applications(id) ON DELETE CASCADE,
+    slot TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('booked', 'cancelled')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS driving_tests (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    score INTEGER NOT NULL,
+    total INTEGER NOT NULL,
+    passed INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS driving_licences (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL UNIQUE REFERENCES applications(id) ON DELETE CASCADE,
+    reference TEXT NOT NULL UNIQUE,
+    issued_at TEXT NOT NULL,
+    delivery_status TEXT NOT NULL CHECK(delivery_status IN ('issued', 'printed', 'dispatched', 'delivered')),
+    updated_at TEXT NOT NULL
+  );
 `);
+
+const paymentColumns = db.prepare('PRAGMA table_info(payments)').all().map((column) => column.name);
+if (!paymentColumns.includes('stage')) db.exec("ALTER TABLE payments ADD COLUMN stage TEXT NOT NULL DEFAULT 'll'");
