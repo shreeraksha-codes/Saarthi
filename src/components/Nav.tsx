@@ -3,17 +3,18 @@ interface NavProps {
   onNavigate: (page: string) => void;
   currentPage?: string;
   onLogout?: () => void;
+  onStart?: () => void;
 }
 
-export default function Nav({ loggedIn, onNavigate, currentPage, onLogout }: NavProps) {
+export default function Nav({ loggedIn, onNavigate, currentPage, onLogout, onStart }: NavProps) {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
-      <div className="max-w-5xl mx-auto flex min-h-16 flex-wrap items-center gap-2 px-5 py-2 sm:flex-nowrap sm:justify-between">
+      <div className="max-w-5xl mx-auto flex min-h-20 flex-wrap items-center gap-2 px-5 py-3 sm:flex-nowrap sm:justify-between">
         <button
           onClick={() => onNavigate("landing")}
-          className="font-serif text-xl text-teal-600 tracking-tight hover:text-teal-700 transition-colors"
+          className="brand-mark text-teal-600 tracking-tight hover:text-teal-700 transition-colors"
         >
-          Sarathi
+          Saarthi
         </button>
 
         <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto">
@@ -41,10 +42,10 @@ export default function Nav({ loggedIn, onNavigate, currentPage, onLogout }: Nav
               </NavLink>
               <NavLink onClick={() => onNavigate("signin")}>Login</NavLink>
               <button
-                onClick={() => onNavigate("entry")}
+                onClick={onStart}
                 className="ml-1 whitespace-nowrap px-3 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 active:bg-teal-800 transition-colors sm:px-4"
               >
-                Apply for a Licence
+                Start your application
               </button>
             </>
           )}

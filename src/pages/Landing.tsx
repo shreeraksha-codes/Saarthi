@@ -1,5 +1,6 @@
 interface LandingProps {
   onNavigate: (page: string) => void;
+  onStart: () => void;
 }
 
 const journeySteps = [
@@ -11,11 +12,11 @@ const journeySteps = [
   { label: "Licence delivered", desc: "Right to your door" },
 ];
 
-export default function Landing({ onNavigate }: LandingProps) {
+export default function Landing({ onNavigate, onStart }: LandingProps) {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-5 pt-20 pb-24 md:pt-28 md:pb-32">
+      <section className="max-w-5xl mx-auto px-5 pt-10 pb-12 md:pt-12 md:pb-16">
         <div className="max-w-2xl">
           <h2 className="text-xs font-semibold tracking-[0.2em] text-teal-700 uppercase mb-3">
             Driving Licence Services
@@ -33,10 +34,10 @@ export default function Landing({ onNavigate }: LandingProps) {
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => onNavigate("entry")}
+              onClick={onStart}
               className="px-6 py-3.5 bg-teal-600 text-white font-medium rounded-xl hover:bg-teal-700 active:bg-teal-800 transition-colors text-base"
             >
-              Apply for a Licence →
+              Start your application →
             </button>
             <button
               onClick={() => onNavigate("resources")}

@@ -92,7 +92,7 @@ function createOrGetApplication(userId, intent) {
     userId,
     intent,
     status: 'started',
-    currentStep: 'application-entry',
+    currentStep: intent === 'existing-ll' ? 'existing-ll-details' : 'application-entry',
     state: null,
     rto: null,
     createdAt: now(),
@@ -172,7 +172,8 @@ app.post('/api/auth/verify', (req, res, next) => {
     db.prepare('DELETE FROM auth_challenges WHERE id = ?').run(challenge.id);
     res.clearCookie('saarthi_otp_challenge');
     setSessionCookie(res, sessionId);
-    const application = challenge.intent ? createOrGetApplication(challenge.userId, challenge.intent) : getCurrentApplication(challenge.userId);
+    const applicationRow = challenge.intent ? createOrGetApplication(challenge.userId, challenge.intent) : getCurrentApplication(challenge.userId);
+    const application = applicationRow ? getApplication(applicationRow.id) : null;
     res.status(200).json({ user: getUser(challenge.userId), application });
   } catch (error) { next(error); }
 });
@@ -194,7 +195,8 @@ app.post('/api/applications', requireAuth, (req, res, next) => {
   try {
     const intent = req.body.intent;
     if (!['first-ll', 'existing-ll'].includes(intent)) throw httpError(400, 'Choose a valid application path.');
-    res.status(201).json({ application: createOrGetApplication(req.userId, intent) });
+    const application = createOrGetApplication(req.userId, intent);
+    res.status(201).json({ application: getApplication(application.id) });
   } catch (error) { next(error); }
 });
 
@@ -210,8 +212,7 @@ app.patch('/api/applications/:id', requireAuth, (req, res, next) => {
     db.prepare(`UPDATE applications SET status = COALESCE(@status, status), current_step = COALESCE(@currentStep, current_step),
       state = COALESCE(@state, state), rto = COALESCE(@rto, rto), updated_at = @updatedAt WHERE id = @id`)
       .run({ id: application.id, status: updates.status || null, currentStep: updates.currentStep || null, state: updates.state || null, rto: updates.rto || null, updatedAt: now() });
-    res.json({ application: db.prepare(`SELECT id, user_id AS userId, intent, status, current_step AS currentStep, state, rto,
-      created_at AS createdAt, updated_at AS updatedAt FROM applications WHERE id = ?`).get(application.id) });
+    res.json({ application: getApplication(application.id) });
   } catch (error) { next(error); }
 });
 
@@ -231,18 +232,23 @@ app.get('/api/applications/:id/full', requireAuth, (req, res, next) => {
 app.patch('/api/applications/:id/details', requireAuth, (req, res, next) => {
   try {
     assertOwner(req.params.id, req.userId);
-    const allowed = ['vehicle', 'dob', 'eligibility', 'name', 'phone', 'email', 'address', 'city', 'pin', 'fitnessConfirmed', 'reviewed'];
+    const allowed = ['vehicle', 'dob', 'eligibility', 'name', 'phone', 'email', 'address', 'city', 'pin', 'fitnessConfirmed', 'reviewed', 'learnerReference', 'llIssueDate', 'documentsGuidance'];
     const updates = Object.fromEntries(Object.entries(req.body || {}).filter(([key, value]) => allowed.includes(key) && (typeof value === 'string' || typeof value === 'boolean')));
+    const allowedSteps = ['application-entry', 'eligibility', 'personal-details', 'documents', 'fitness', 'review', 'payment', 'submitted', 'll-preparation', 'll-test', 'll-result', 'll-issued', 'waiting-period', 'dl-eligible', 'existing-ll-details'];
     const stage = req.body.nextStep;
-    if (!Object.keys(updates).length && !(typeof stage === 'string' && ['eligibility', 'personal-details', 'documents', 'fitness', 'review', 'payment', 'll-preparation', 'll-test'].includes(stage))) throw httpError(400, 'Provide valid application details.');
+    if (!Object.keys(updates).length && !(typeof stage === 'string' && allowedSteps.includes(stage)) && !(typeof req.body.state === 'string' && typeof req.body.rto === 'string')) throw httpError(400, 'Provide valid application details.');
     if (updates.phone && !/^\d{10}$/.test(String(updates.phone).replace(/\D/g, ''))) throw httpError(400, 'Enter a valid 10-digit mobile number.');
     if (updates.email && !/^\S+@\S+\.\S+$/.test(updates.email)) throw httpError(400, 'Enter a valid email address.');
     if (updates.dob && Number.isNaN(Date.parse(updates.dob))) throw httpError(400, 'Enter a valid date of birth.');
+    if (updates.learnerReference) updates.learnerReference = String(updates.learnerReference).trim().slice(0, 40);
     saveDetails(req.params.id, updates);
-    if (typeof req.body.state === 'string' && typeof req.body.rto === 'string' && req.body.state.trim() && req.body.rto.trim()) {
-      db.prepare('UPDATE applications SET state = ?, rto = ?, updated_at = ? WHERE id = ?').run(req.body.state.trim().slice(0, 80), req.body.rto.trim().slice(0, 120), now(), req.params.id);
+    if (typeof req.body.state === 'string' && req.body.state.trim()) {
+      const rto = typeof req.body.rto === 'string' ? req.body.rto.trim().slice(0, 120) : null;
+      db.prepare('UPDATE applications SET state = ?, rto = COALESCE(?, rto), updated_at = ? WHERE id = ?').run(req.body.state.trim().slice(0, 80), rto || null, now(), req.params.id);
+    } else if (typeof req.body.rto === 'string' && req.body.rto.trim()) {
+      db.prepare('UPDATE applications SET rto = ?, updated_at = ? WHERE id = ?').run(req.body.rto.trim().slice(0, 120), now(), req.params.id);
     }
-    if (typeof stage === 'string' && ['eligibility', 'personal-details', 'documents', 'fitness', 'review', 'payment', 'll-preparation', 'll-test'].includes(stage)) { updateJourney(req.params.id, stage); addEvent(req.params.id, stage, stage.replace(/-/g, ' ')); }
+    if (typeof stage === 'string' && allowedSteps.includes(stage)) { updateJourney(req.params.id, stage); addEvent(req.params.id, stage, stage.replace(/-/g, ' ')); }
     res.json({ application: getApplication(req.params.id) });
   } catch (error) { next(error); }
 });
@@ -256,7 +262,9 @@ app.put('/api/applications/:id/documents/:type', requireAuth, (req, res, next) =
     db.prepare(`INSERT INTO documents (id, application_id, document_type, status, updated_at) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(application_id, document_type) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at`).run(id(), req.params.id, type, status, now());
     const allReady = db.prepare("SELECT COUNT(*) AS count FROM documents WHERE application_id = ? AND status IN ('ready', 'replaced')").get(req.params.id).count === 3;
-    updateJourney(req.params.id, status === 'rejected' || !allReady ? 'documents' : 'fitness');
+    const current = db.prepare('SELECT current_step AS currentStep FROM applications WHERE id = ?').get(req.params.id);
+    if (status === 'rejected') updateJourney(req.params.id, 'documents');
+    else if (allReady && current?.currentStep === 'documents') updateJourney(req.params.id, 'fitness');
     addEvent(req.params.id, `document_${status}`, `${type.replace(/-/g, ' ')} ${status}`);
     res.json({ application: getApplication(req.params.id) });
   } catch (error) { next(error); }
@@ -268,10 +276,10 @@ app.post('/api/applications/:id/payment', requireAuth, (req, res, next) => {
     const method = req.body.method;
     const outcome = req.body.outcome || 'successful';
     if (!['UPI', 'Card', 'Net banking'].includes(method) || !['successful', 'failed'].includes(outcome)) throw httpError(400, 'Choose a valid demo payment method.');
-    const existing = db.prepare("SELECT id, reference, method, amount, status, created_at AS createdAt, updated_at AS updatedAt FROM payments WHERE application_id = ? AND status = 'successful' ORDER BY created_at DESC LIMIT 1").get(req.params.id);
+    const existing = db.prepare("SELECT id, reference, method, amount, status, created_at AS createdAt, updated_at AS updatedAt FROM payments WHERE application_id = ? AND stage = 'll' AND status = 'successful' ORDER BY created_at DESC LIMIT 1").get(req.params.id);
     if (existing) return res.json({ payment: existing, application: getApplication(req.params.id) });
     const payment = { id: id(), reference: `DEMO-PAY-${crypto.randomUUID().replace(/-/g, '').slice(0, 7).toUpperCase()}`, method, amount: 480, status: outcome, createdAt: now(), updatedAt: now() };
-    db.prepare('INSERT INTO payments (id, application_id, reference, method, amount, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(payment.id, req.params.id, payment.reference, payment.method, payment.amount, payment.status, payment.createdAt, payment.updatedAt);
+    db.prepare('INSERT INTO payments (id, application_id, reference, method, amount, status, created_at, updated_at, stage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(payment.id, req.params.id, payment.reference, payment.method, payment.amount, payment.status, payment.createdAt, payment.updatedAt, 'll');
     updateJourney(req.params.id, outcome === 'successful' ? 'submitted' : 'payment', outcome === 'successful' ? 'submitted' : 'payment-failed');
     addEvent(req.params.id, `payment_${outcome}`, `Demo payment ${outcome}`);
     res.status(201).json({ payment, application: getApplication(req.params.id) });
@@ -298,12 +306,12 @@ app.post('/api/applications/:id/issue-learner-licence', requireAuth, (req, res, 
     assertOwner(req.params.id, req.userId); const application = getApplication(req.params.id); if (!application.test?.passed) throw httpError(409, 'Pass the learner test before issuing the demo licence.');
     let licence = application.licence;
     if (!licence) { const issuedAt = now(); const validUntil = new Date(Date.now() + 183 * 86400000).toISOString(); const eligible = new Date(Date.now() + 30 * 86400000).toISOString(); licence = { reference: `LL-DEMO-${crypto.randomUUID().replace(/-/g, '').slice(0, 7).toUpperCase()}`, issuedAt, validUntil, eligibleForDlAt: eligible }; db.prepare('INSERT INTO learner_licences (id, application_id, reference, issued_at, valid_until, eligible_for_dl_at) VALUES (?, ?, ?, ?, ?, ?)').run(id(), req.params.id, licence.reference, issuedAt, validUntil, eligible); }
-    updateJourney(req.params.id, 'waiting-period', 'll-issued'); addEvent(req.params.id, 'll_issued', 'Learner Licence issued — Demo'); res.json({ application: getApplication(req.params.id) });
+    updateJourney(req.params.id, 'll-issued', 'll-issued'); addEvent(req.params.id, 'll_issued', 'Learner Licence issued — Demo'); res.json({ application: getApplication(req.params.id) });
   } catch (error) { next(error); }
 });
 
 app.post('/api/applications/:id/demo/fast-forward-wait', requireAuth, (req, res, next) => {
-  try { assertOwner(req.params.id, req.userId); db.prepare('UPDATE learner_licences SET eligible_for_dl_at = ? WHERE application_id = ?').run(now(), req.params.id); addEvent(req.params.id, 'waiting_period_demo_complete', 'Demo waiting period completed'); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); }
+  try { assertOwner(req.params.id, req.userId); db.prepare('UPDATE learner_licences SET eligible_for_dl_at = ? WHERE application_id = ?').run(now(), req.params.id); updateJourney(req.params.id, 'dl-eligible', 'dl-eligible'); addEvent(req.params.id, 'waiting_period_demo_complete', 'Demo waiting period completed'); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); }
 });
 
 function dlEligible(application) {
@@ -315,7 +323,13 @@ function createOrGetDl(applicationId) {
   if (row) return row;
   const application = getApplication(applicationId);
   if (!dlEligible(application)) throw httpError(409, 'Your simulated 30-day waiting period is not complete yet.');
-  const data = { name: application.details.name || '', dob: application.details.dob || '', phone: application.details.phone || '', email: application.details.email || '', address: application.details.address || '', city: application.details.city || '', pin: application.details.pin || '', vehicle: application.details.vehicle || '', state: application.state || '', rto: application.rto || '', learnerReference: application.licence?.reference || 'LL-DEMO-EXISTING' };
+  if (application.intent === 'existing-ll') {
+    if (!application.details.learnerReference || !application.details.llIssueDate || !application.details.vehicle || !application.details.name) {
+      throw httpError(409, 'Confirm your Learner\'s Licence number, issue date, vehicle class and name before starting the Driving Licence application.');
+    }
+  }
+  const learnerReference = application.licence?.reference || application.details.learnerReference || '';
+  const data = { name: application.details.name || '', dob: application.details.dob || '', phone: application.details.phone || '', email: application.details.email || '', address: application.details.address || '', city: application.details.city || '', pin: application.details.pin || '', vehicle: application.details.vehicle || '', state: application.state || '', rto: application.rto || '', learnerReference, llIssueDate: application.details.llIssueDate || application.licence?.issuedAt || '' };
   db.prepare('INSERT INTO dl_applications (application_id, data, status, updated_at) VALUES (?, ?, ?, ?)').run(applicationId, JSON.stringify(data), 'review', now());
   updateJourney(applicationId, 'dl-review', 'dl-review'); addEvent(applicationId, 'dl_started', 'Driving Licence application started');
   return { applicationId, data: JSON.stringify(data), status: 'review' };
@@ -332,19 +346,49 @@ app.post('/api/appointments', requireAuth, (req, res, next) => { try { const app
 app.patch('/api/appointments/:id', requireAuth, (req, res, next) => { try { const appointment = db.prepare('SELECT application_id AS applicationId FROM appointments WHERE id = ?').get(req.params.id); if (!appointment) throw httpError(404, 'Appointment not found.'); assertOwner(appointment.applicationId, req.userId); if (req.body.status === 'cancelled') { db.prepare('UPDATE appointments SET status = ?, updated_at = ? WHERE id = ?').run('cancelled', now(), req.params.id); updateJourney(appointment.applicationId, 'dl-appointment', 'appointment-cancelled'); } else throw httpError(400, 'Only cancellation is supported in this demo.'); res.json({ application: getApplication(appointment.applicationId) }); } catch (error) { next(error); } });
 
 app.post('/api/tests/driving/start', requireAuth, (req, res, next) => { try { assertOwner(req.body.applicationId, req.userId); const application = getApplication(req.body.applicationId); if (!application.dl?.appointment || application.dl.appointment.status !== 'booked') throw httpError(409, 'Book a demo appointment before starting the driving test.'); updateJourney(req.body.applicationId, 'dl-driving-test', 'driving-test'); addEvent(req.body.applicationId, 'driving_test_started', 'Demo driving test started'); res.json({ application: getApplication(req.body.applicationId) }); } catch (error) { next(error); } });
-app.post('/api/tests/driving/submit', requireAuth, (req, res, next) => { try { assertOwner(req.body.applicationId, req.userId); const checks = req.body.checks; if (!Array.isArray(checks) || checks.length !== 5 || checks.some((check) => typeof check !== 'boolean')) throw httpError(400, 'Complete every driving-test check.'); const score = checks.filter(Boolean).length; const passed = score >= 4; db.prepare('INSERT INTO driving_tests (id, application_id, score, total, passed, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(id(), req.body.applicationId, score, 5, passed ? 1 : 0, now()); updateJourney(req.body.applicationId, 'dl-driving-result', passed ? 'driving-test-passed' : 'driving-test-failed'); addEvent(req.body.applicationId, passed ? 'driving_test_passed' : 'driving_test_failed', passed ? 'Driving test passed' : 'Driving test needs another attempt'); res.json({ application: getApplication(req.body.applicationId) }); } catch (error) { next(error); } });
+app.post('/api/tests/driving/submit', requireAuth, (req, res, next) => { try { assertOwner(req.body.applicationId, req.userId); const outcome = req.body.outcome; let score; let passed; if (outcome === 'passed') { score = 5; passed = true; } else if (outcome === 'failed') { score = 2; passed = false; } else { const checks = req.body.checks; if (!Array.isArray(checks) || checks.length !== 5 || checks.some((check) => typeof check !== 'boolean')) throw httpError(400, 'Choose pass or another attempt, or complete every driving-test check.'); score = checks.filter(Boolean).length; passed = score >= 4; } db.prepare('INSERT INTO driving_tests (id, application_id, score, total, passed, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(id(), req.body.applicationId, score, 5, passed ? 1 : 0, now()); updateJourney(req.body.applicationId, 'dl-driving-result', passed ? 'driving-test-passed' : 'driving-test-failed'); addEvent(req.body.applicationId, passed ? 'driving_test_passed' : 'driving_test_failed', passed ? 'Driving test passed' : 'Driving test needs another attempt'); res.json({ application: getApplication(req.body.applicationId) }); } catch (error) { next(error); } });
 
 app.post('/api/applications/:id/dl/issue', requireAuth, (req, res, next) => { try { assertOwner(req.params.id, req.userId); const application = getApplication(req.params.id); if (!application.dl?.drivingTest?.passed) throw httpError(409, 'Pass the demo driving test before issuing the licence.'); let licence = application.dl.licence; if (!licence) { licence = { reference: `DL-DEMO-${crypto.randomUUID().replace(/-/g, '').slice(0, 7).toUpperCase()}`, issuedAt: now() }; db.prepare('INSERT INTO driving_licences (id, application_id, reference, issued_at, delivery_status, updated_at) VALUES (?, ?, ?, ?, ?, ?)').run(id(), req.params.id, licence.reference, licence.issuedAt, 'issued', now()); } updateJourney(req.params.id, 'dl-delivery', 'dl-issued'); addEvent(req.params.id, 'dl_issued', 'Driving Licence issued — Demo'); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); } });
 app.get('/api/applications/:id/licence', requireAuth, (req, res, next) => { try { assertOwner(req.params.id, req.userId); const licence = getApplication(req.params.id).dl?.licence; if (!licence) throw httpError(404, 'Driving Licence record not found.'); res.json({ licence }); } catch (error) { next(error); } });
 app.get('/api/applications/:id/delivery', requireAuth, (req, res, next) => { try { assertOwner(req.params.id, req.userId); const licence = getApplication(req.params.id).dl?.licence; if (!licence) throw httpError(404, 'Delivery is not available yet.'); res.json({ delivery: licence }); } catch (error) { next(error); } });
 app.post('/api/applications/:id/delivery/advance', requireAuth, (req, res, next) => { try { assertOwner(req.params.id, req.userId); const sequence = ['issued', 'printed', 'dispatched', 'delivered']; const licence = getApplication(req.params.id).dl?.licence; if (!licence) throw httpError(404, 'Driving Licence record not found.'); const nextStatus = sequence[Math.min(sequence.indexOf(licence.deliveryStatus) + 1, sequence.length - 1)]; db.prepare('UPDATE driving_licences SET delivery_status = ?, updated_at = ? WHERE application_id = ?').run(nextStatus, now(), req.params.id); updateJourney(req.params.id, 'dl-delivery', nextStatus === 'delivered' ? 'dl-delivered' : `dl-${nextStatus}`); addEvent(req.params.id, `dl_${nextStatus}`, `Driving Licence ${nextStatus} — Demo`); res.json({ application: getApplication(req.params.id) }); } catch (error) { next(error); } });
 
+const GUIDED_FIELDS = ['vehicle', 'state', 'rto', 'dob', 'name', 'phone', 'email', 'address', 'city', 'pin', 'documents', 'fitness'];
+const STATE_RTOS = { Maharashtra: ['Pune West (MH-12)', 'Mumbai Central (MH-01)'], Karnataka: ['Bengaluru Central (KA-01)'], Delhi: ['Sarai Kale Khan (DL-01)'], 'Tamil Nadu': ['Chennai Central (TN-09)'] };
+
+function persistGuidedField(applicationId, field, value) {
+  if (field === 'state') db.prepare('UPDATE applications SET state = ?, updated_at = ? WHERE id = ?').run(value, now(), applicationId);
+  else if (field === 'rto') db.prepare('UPDATE applications SET rto = ?, updated_at = ? WHERE id = ?').run(value, now(), applicationId);
+  else if (field === 'documents') saveDetails(applicationId, { documentsGuidance: true });
+  else if (field === 'fitness') saveDetails(applicationId, { fitnessConfirmed: true });
+  else saveDetails(applicationId, { [field]: value });
+  addEvent(applicationId, 'guided_application_update', `Guided ${field} confirmed`);
+}
+
 function deterministicGuide(field, message) {
   const lower = message.toLowerCase(); let value = null; let reply = '';
-  if (/proof of address|address proof/.test(lower)) reply = 'Proof of address means a document showing where you currently live. Accepted documents can vary by state/RTO.';
-  else if (field === 'vehicle') { value = /both|bike.*car|car.*bike/.test(lower) ? 'LMV — Light Motor Vehicle and motorcycle (confirm at RTO)' : /car|lmv/.test(lower) ? 'LMV — Light Motor Vehicle' : /motor|bike|scooter/.test(lower) ? 'MCWG — Motorcycle with Gear' : null; reply = value ? `I understood: ${value}. Is that correct?` : 'Please choose a vehicle class: motorcycle or car. Your state/RTO confirms the final category.'; }
-  else if (field === 'name') { value = message; reply = `I understood your name as ${message}. Is that correct?`; }
-  else if (field === 'state') { value = ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu'].find((item) => item.toLowerCase() === lower) || null; reply = value ? `I understood: ${value}. Is that correct?` : 'Choose Maharashtra, Karnataka, Delhi, or Tamil Nadu in this demo. Requirements can vary by state/RTO.'; }
+  if (/proof of address|address proof/.test(lower)) {
+    reply = 'Proof of address means a document showing where you currently live. Accepted documents can vary by state/RTO.';
+    return { assistantMessage: reply, extractedField: null, extractedValue: null, requiresConfirmation: false, needsClarification: true };
+  }
+  if (/come back|save.*later|resume/.test(lower)) {
+    reply = 'Yes. This demo saves your answers on the server, so you can switch to the classic form and return later.';
+    return { assistantMessage: reply, extractedField: null, extractedValue: null, requiresConfirmation: false, needsClarification: true };
+  }
+  if (field === 'vehicle') { value = /both|bike.*car|car.*bike/.test(lower) ? 'LMV — Light Motor Vehicle' : /without gear|mcwog|scooter/.test(lower) ? 'MCWOG — Motorcycle without Gear' : /car|lmv/.test(lower) ? 'LMV — Light Motor Vehicle' : /motor|bike|mcwg/.test(lower) ? 'MCWG — Motorcycle with Gear' : null; reply = value ? `I understood: ${value}. Is that correct?` : 'Please choose motorcycle with gear, motorcycle without gear, or car. Your state/RTO confirms the final category.'; }
+  else if (field === 'state') { value = Object.keys(STATE_RTOS).find((item) => item.toLowerCase() === lower || lower.includes(item.toLowerCase())) || null; reply = value ? `I understood: ${value}. Is that correct?` : 'Choose Maharashtra, Karnataka, Delhi, or Tamil Nadu in this demo.'; }
+  else if (field === 'rto') {
+    const all = Object.values(STATE_RTOS).flat();
+    value = all.find((item) => item.toLowerCase() === lower || lower.includes(item.toLowerCase().split(' (')[0])) || null;
+    reply = value ? `I understood: ${value}. Is that correct?` : 'Choose one of the demo RTO offices listed for your state.';
+  }
+  else if (field === 'dob') { const match = message.match(/\d{4}-\d{2}-\d{2}/) || message.match(/\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}/); value = match ? match[0] : null; if (value && value.includes('/')) { const [d, m, y] = value.split(/[\/.-]/); if (y && y.length === 4) value = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`; } reply = value ? `I understood your date of birth as ${value}. Is that correct?` : 'Please enter your date of birth as YYYY-MM-DD.'; }
+  else if (field === 'phone') { const digits = message.replace(/\D/g, ''); value = digits.length === 10 ? digits : null; reply = value ? `I understood your mobile number as ${value}. Is that correct?` : 'Enter a 10-digit Indian mobile number.'; }
+  else if (field === 'pin') { const digits = message.replace(/\D/g, ''); value = digits.length === 6 ? digits : null; reply = value ? `I understood PIN ${value}. Is that correct?` : 'Enter a 6-digit PIN code.'; }
+  else if (field === 'email') { value = /\S+@\S+\.\S+/.test(message) ? message.trim() : null; reply = value ? `I understood your email as ${value}. Is that correct?` : 'Enter an email address, or switch to the classic form to skip this optional field.'; }
+  else if (field === 'documents') { value = /ready|understand|yes|ok|checklist/.test(lower) ? 'acknowledged' : null; reply = value ? 'I understood that you are ready to use the document checklist. Save this and continue?' : 'You will need identity, address, and photo/signature evidence. Exact lists vary by state/RTO. Say yes when you understand the checklist.'; }
+  else if (field === 'fitness') { value = /yes|confirm|understand|form/.test(lower) ? 'confirmed' : null; reply = value ? 'I understood you confirm the demo fitness declaration. Save this?' : 'Form 1 is a self-declaration in many cases. Form 1A may apply from age 40 or in other cases. Confirm with your RTO. Say yes if you understand.'; }
+  else if (['name', 'address', 'city'].includes(field)) { value = message.trim().slice(0, 120); reply = `I understood: ${value}. Is that correct?`; }
   return { assistantMessage: reply, extractedField: value ? field : null, extractedValue: value, requiresConfirmation: Boolean(value), needsClarification: !value };
 }
 
@@ -363,12 +407,18 @@ function validGuidedResult(result, field) { return result && typeof result.assis
 app.post('/api/ai/application-message', requireAuth, async (req, res, next) => {
   try {
     const applicationId = req.body.applicationId; assertOwner(applicationId, req.userId);
-    const message = String(req.body.message || '').trim().slice(0, 300); const field = String(req.body.field || 'vehicle');
+    const field = String(req.body.field || 'vehicle');
+    if (!GUIDED_FIELDS.includes(field)) throw httpError(400, 'That guided field is not available. Switch to the classic form for other details.');
+    if (req.body.confirm === true) {
+      const extractedValue = String(req.body.extractedValue || '').trim().slice(0, 160);
+      if (!extractedValue) throw httpError(400, 'Confirm a value before saving.');
+      persistGuidedField(applicationId, field, extractedValue);
+      return res.json({ assistantMessage: 'Saved. We can continue.', extractedField: field, extractedValue, requiresConfirmation: false, needsClarification: false, mode: 'confirmed', saved: true, application: getApplication(applicationId) });
+    }
+    const message = String(req.body.message || '').trim().slice(0, 300);
     if (!message) throw httpError(400, 'Write a response before sending.');
-    if (!['vehicle', 'state', 'name'].includes(field)) throw httpError(400, 'That guided field is not available. Switch to the classic form for other details.');
     let result; let mode = 'llm'; try { result = await llmGuide(field, message); if (!validGuidedResult(result, field)) throw new Error('LLM_INVALID_OUTPUT'); } catch (_) { result = deterministicGuide(field, message); mode = 'fallback'; }
-    if (req.body.confirm === true && result.extractedField === field && result.extractedValue) { if (field === 'state') db.prepare('UPDATE applications SET state = ?, updated_at = ? WHERE id = ?').run(result.extractedValue, now(), applicationId); else saveDetails(applicationId, { [field]: result.extractedValue }); addEvent(applicationId, 'guided_application_update', 'Guided application answer confirmed'); }
-    res.json({ ...result, mode, saved: req.body.confirm === true && Boolean(result.extractedValue), application: getApplication(applicationId) });
+    res.json({ ...result, mode, saved: false, application: getApplication(applicationId) });
   } catch (error) { next(error); }
 });
 

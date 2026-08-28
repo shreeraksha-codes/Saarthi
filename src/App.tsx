@@ -29,10 +29,9 @@ export default function App() {
         try {
           const { application } = await getCurrentApplication();
           setApplication(application);
-          setPage("dashboard");
         } catch (error) {
           if (!(error instanceof ApiError) || error.status !== 404) throw error;
-          setPage("entry");
+          setApplication(null);
         }
       } catch (error) {
         if (!(error instanceof ApiError) || error.status !== 401) console.error(error);
@@ -43,7 +42,11 @@ export default function App() {
 
   const navigate = (p: string, data?: unknown) => {
     if (data !== undefined) setNavData(data);
-    setPage(p as Page);
+    else if (p !== "apply" && p !== "guided") setNavData(null);
+    let next = p as Page;
+    if ((next === "dashboard" || next === "apply" || next === "guided") && !application) next = "entry";
+    if (next === "entry" && loggedIn && application && data === undefined) next = "dashboard";
+    setPage(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -56,25 +59,33 @@ export default function App() {
     finally { setLoggedIn(false); setUser(null); setApplication(null); setNavData(null); setPage("landing"); }
   };
 
-  // Pages without the Nav shell
+  const startApplication = () => {
+    if (loggedIn && application) navigate("dashboard");
+    else navigate("entry");
+  };
+
   const bare = page === "signin";
+  const applyFocus = typeof navData === "object" && navData !== null && "focus" in navData ? String((navData as { focus?: string }).focus || "") : "";
 
   if (restoring) return <div className="min-h-screen bg-white flex items-center justify-center text-sm text-gray-500">Restoring your journey…</div>;
 
   return (
     <div className="min-h-full flex flex-col">
       <a className="skip-link" href="#main-content">Skip to main content</a>
-      {!bare && <Nav loggedIn={loggedIn} onNavigate={navigate} currentPage={page} onLogout={handleLogout} />}
+      {!bare && <Nav loggedIn={loggedIn} onNavigate={navigate} currentPage={page} onLogout={handleLogout} onStart={startApplication} />}
 
       <main id="main-content" tabIndex={-1}>
-        {page === "landing" && <Landing onNavigate={navigate} />}
-        {page === "resources" && <Resources onNavigate={navigate} />}
-        {page === "entry" && <ApplicationEntry onNavigate={navigate} />}
+        {page === "landing" && <Landing onNavigate={navigate} onStart={startApplication} />}
+        {page === "resources" && <Resources onNavigate={navigate} onStart={startApplication} />}
+        {page === "entry" && <ApplicationEntry onNavigate={navigate} loggedIn={loggedIn} application={application} onApplication={setApplication} />}
         {page === "signin" && <SignIn onNavigate={navigate} navData={navData} onAuthenticated={handleAuthenticated} />}
-        {page === "dashboard" && application && <Dashboard onNavigate={navigate} user={user} application={application} />}
-        {page === "apply" && application && <ApplicationFlow application={application} onUpdated={setApplication} onNavigate={navigate} />}
-        {page === "guided" && application && <GuidedApplication application={application} onUpdated={setApplication} onNavigate={navigate} />}
+        {page === "dashboard" && application ? <Dashboard onNavigate={navigate} user={user} application={application} /> : null}
+        {page === "apply" && application ? <ApplicationFlow application={application} onUpdated={setApplication} onNavigate={navigate} focus={applyFocus} /> : null}
+        {page === "guided" && application ? <GuidedApplication application={application} onUpdated={setApplication} onNavigate={navigate} /> : null}
         {page === "help" && <Help onNavigate={navigate} application={application} />}
+        {(page === "dashboard" || page === "apply" || page === "guided") && !application && (
+          <ApplicationEntry onNavigate={navigate} loggedIn={loggedIn} application={application} onApplication={setApplication} />
+        )}
       </main>
     </div>
   );

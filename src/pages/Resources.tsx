@@ -1,5 +1,5 @@
 import { useState } from "react";
-interface Props { onNavigate: (page: string) => void; }
+interface Props { onNavigate: (page: string) => void; onStart: () => void; }
 const resources = [
   ["journey", "How the licence journey works", "Start with the Learner's Licence, complete the waiting period, then continue to the Driving Licence stage. Some steps require an RTO visit."],
   ["documents", "Documents you may need", "Prepare clear identity, address, age, photograph and signature evidence as applicable. Exact requirements can vary by state/RTO."],
